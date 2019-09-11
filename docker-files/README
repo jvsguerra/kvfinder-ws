@@ -1,0 +1,7 @@
+
+Para rodar o container do ocypod+redis
+
+$ docker-compose up
+
+Requisitos:
+- instalar o docker-compose
