@@ -16,6 +16,18 @@ struct Job {
     expires_after: String,
 }
 
+#[derive(Serialize, Deserialize)]
+struct Input {
+    f1: String,
+    f2: i32,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Data {
+    tags: [String;1],
+    input: Input,
+}
+
 fn hello() -> impl Responder {
     "KVFinder Web"
 }
@@ -54,13 +66,32 @@ fn ask(id: web::Path<String>) -> impl Responder {
     }
 }
 
-fn create() {}
+fn create(job_input: web::Json<Input>) -> impl Responder {
+    let inp = job_input.into_inner();
+    let data = Data {
+        tags: [city::hash64(serde_json::to_string(&inp).unwrap()).to_string()],
+        input: inp,
+    };
+    let create_job = || {
+        let client = reqwest::Client::new();
+        let res = client.post("http://0.0.0.0:8023/queue/dev/job")
+            .json(&data)
+            .send();
+        match res {
+            Ok(s) => format!("created {}\n {:?}\n", data.tags[0], s),
+            Err(e) => format!("{}", e),
+        }
+    };
+    let job = get_job(data.tags[0].clone());
+    match job {
+        Err(e) => format!("{:?}", e),
+        Ok(Some(j)) => format!("{}", serde_json::to_string(&j).unwrap()),
+        Ok(None) => create_job(), //format!("{} created", tag_id),
+    }
+}
 
 fn main() {
-    let s = String::from("{data: atoms}");
-    let h = city::hash64(&s);
-    println!("{} {}", s, h);
-    println!("Hello, world!");
+    println!("KVFinder web!");
     
     HttpServer::new(|| {
         App::new()
