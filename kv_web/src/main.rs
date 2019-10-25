@@ -20,6 +20,7 @@ struct Job {
 struct Input {
     f1: String,
     f2: i32,
+    f3: i32,
 }
 
 #[derive(Serialize, Deserialize)]
