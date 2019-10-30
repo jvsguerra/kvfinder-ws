@@ -1,4 +1,4 @@
-use actix_web::{HttpServer, App, web, Responder};
+use actix_web::{HttpServer, App, web, Responder, HttpResponse};
 use fasthash::city;
 use reqwest;
 use serde::{Deserialize, Serialize};
@@ -61,9 +61,9 @@ fn ask(id: web::Path<String>) -> impl Responder {
     let tag_id = id.into_inner();
     let job = get_job(tag_id);
     match job {
-        Err(e) => format!("{:?}", e),
-        Ok(None) => format!("not found in job queue"),
-        Ok(Some(j)) => format!("{}", serde_json::to_string(&j).unwrap()),
+        Err(e) => HttpResponse::InternalServerError().body(format!("{:?}", e)),
+        Ok(None) => HttpResponse::NotFound().finish(),
+        Ok(Some(j)) => HttpResponse::Ok().json(serde_json::to_string(&j).unwrap()),
     }
 }
 
@@ -79,7 +79,7 @@ fn create(job_input: web::Json<Input>) -> impl Responder {
             .json(&data)
             .send();
         match res {
-            Ok(s) => format!("created {}\n {:?}\n", data.tags[0], s),
+            Ok(_) => format!("{{\"id\":\"{}\"}}\n", data.tags[0]),
             Err(e) => format!("{}", e),
         }
     };
@@ -96,9 +96,10 @@ fn main() {
     
     HttpServer::new(|| {
         App::new()
+            .data(web::JsonConfig::default().limit(1_000_000))
             .route("/", web::get().to(hello))
             .route("/{id}", web::get().to(ask))
-            .route("/create", web::post().to(create))
+            .route("/create", web::post().to(create)) 
     })
     .bind("127.0.0.1:8081")
     .expect("Cannot bind to port 8081")
