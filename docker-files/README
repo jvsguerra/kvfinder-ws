@@ -1,7 +1,15 @@
 
 Para rodar o container do ocypod+redis
 
-$ docker-compose up
+$ docker-compose up -d
+
+Para para
+$ docker-compose down
 
 Requisitos:
 - instalar o docker-compose
+- precisa ser executado com sudo
+
+Importante:
+- após a primeira execução do container precisa criar a fila:
+	curl -i -H 'content-type: application/json' -XPUT -d '{"timeout": "1h"}' localhost:8023/queue/dev

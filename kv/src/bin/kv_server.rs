@@ -11,7 +11,7 @@ fn main() {
             .route("/{id}", web::get().to(kv::webserver::ask))
             .route("/create", web::post().to(kv::webserver::create)) 
     })
-    .bind("127.0.0.1:8081")
+    .bind("10.0.42.124:8081")
     .expect("Cannot bind to port 8081")
     .run()
     .unwrap();
