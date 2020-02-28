@@ -1,6 +1,7 @@
 import json
 import requests
 import zlib
+from time import sleep
 
 def add_settings(job_input):
     job_input["settings"] = {}
@@ -27,14 +28,17 @@ def add_settings(job_input):
     }
 
     job_input["settings"]["visiblebox"] = {
-        "bP1" : {"bX1" : 0.00, "bY1" : 0.00, "bZ1" : 0.00},
-        "bP2" : {"bX2" : 0.00, "bY2" : 0.00, "bZ2" : 0.00},
-        "bP3" : {"bX3" : 0.00, "bY3" : 0.00, "bZ3" : 0.00},
-        "bP4" : {"bX4" : 0.00, "bY4" : 0.00, "bZ4" : 0.00},
+        "p1" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+        "p2" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+        "p3" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+        "p4" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
     }
 
     job_input["settings"]["internalbox"] = {
-        "P1" : {"X1" : -4.00, "Y1" : -4.00, "Z1" : -4.00}
+        "p1" : {"x" : -4.00, "y" : -4.00, "z" : -4.00},
+        "p2" : {"x" : 4.00, "y" : -4.00, "z" : -4.00},
+        "p3" : {"x" : -4.00, "y" : 4.00, "z" : -4.00},
+        "p4" : {"x" : -4.00, "y" : -4.00, "z" : 4.00},
     }
 
 def add_pdb(job_input, pdb_fn, is_ligand=False):
@@ -57,28 +61,34 @@ def create_job_input(path_protein_pdb, path_ligand_pdb=None):
     return job_input
 
 def send_job(server, job_input):
-    # headers = {'Content-Type': 'application/json', 'Content-Encoding': 'gzip'}
-    # job_input_json = bytes(json.dumps(job_input), 'utf8')
     r = requests.post(server + '/create', json=job_input)
-    # print(job_input)
-    # exit()
-    # print(r.json()['id'])
-    print(r, r.text)
     return r.json()['id']
 
 def get_job(server, job_id):
     r = requests.get(server + '/' + job_id)
     if r.ok:
-        print(r.json())
-        return r.json()
+        results = r.json()
+        if results['status'] == 'completed':
+            return results
+        else:
+            print(results)
+            return None
     else:
         print(r)
         return None
 
 if __name__ == "__main__":
     job_input = create_job_input("./1FMO.pdb")
-    # job_input = {'f1': 'from-python-client', 'f2': 7, 'f3': 13}
     # print(job_input)
     server = "http://localhost:8081"
     job_id = send_job(server, job_input)
-    get_job(server, job_id)
+    results = None
+    while results == None:
+        results = get_job(server, job_id)
+        sleep(2)
+    # pdb file 
+    print(results['output']['pdb_kv'])
+    # toml report
+    print(results['output']['report'])
+    # log
+    print(results['output']['log'])
