@@ -1,51 +1,17 @@
 import json
+from typing import Optional, Any, Dict
 import requests
 import zlib
 from time import sleep
 
-class KVClient:
-    def __init__(self, server, port):
-        self.server = "{}:{}".format(server, port)
-
-
-    def run(self, kv_job):
-        self._submit(kv_job)
-        while kv_job.output == None:
-            kv_job.output = self._get_results(kv_job)
-            sleep(2)
-        print("OK")
-
-    def _submit(self, kv_job):
-        r = requests.post(self.server + '/create', json=kv_job.input)
-        if r.ok:
-            kv_job.id = r.json()['id']
-            return True
-        else:
-            print("Debug:", r)
-            return False
-
-    def _get_results(self, kv_job):
-        r = requests.get(self.server + '/' + kv_job.id)
-        if r.ok:
-            results = r.json()
-            if results['status'] == 'completed':
-                return results
-            else:
-                print(results)
-                return None
-        else:
-            print(r)
-            return None
-
-
 class KVJob:
-    def __init__(self, path_protein_pdb, path_ligand_pdb=None):
-        self.id = None
-        self.input = {}
-        self.output = None 
+    def __init__(self, path_protein_pdb: str, path_ligand_pdb: Optional[str]=None):
+        self.id: Optional[str] = None
+        self.input: Optional[Dict[str, Any]] = {}
+        self.output: Optional[Dict[str, Any]] = None 
         self._add_pdb(path_protein_pdb)
         if path_ligand_pdb != None:
-            self._add_path(path_ligand_pdb, is_ligand=True)
+            self._add_pdb(path_ligand_pdb, is_ligand=True)
         self._default_settings()
 
     @property
@@ -69,7 +35,7 @@ class KVJob:
         else:
             return self.output["output"]["log"]
 
-    def _add_pdb(self, pdb_fn, is_ligand=False):
+    def _add_pdb(self, pdb_fn: str, is_ligand: bool=False):
         with open(pdb_fn) as f:
             pdb = f.readlines()
         if is_ligand:
@@ -110,12 +76,46 @@ class KVJob:
             "p4" : {"x" : -4.00, "y" : -4.00, "z" : 4.00},
         }
 
+class KVClient:
+    def __init__(self, server: str, port: str):
+        self.server = f"{server}:{port}"
 
+    def run(self, kv_job: KVJob):
+        if self._submit(kv_job):
+            while kv_job.output == None:
+                kv_job.output = self._get_results(kv_job)
+                sleep(2)
+            print("OK")
+
+    def _submit(self, kv_job) -> bool:
+        r = requests.post(self.server + '/create', json=kv_job.input)
+        if r.ok:
+            kv_job.id = r.json()['id']
+            return True
+        else:
+            print("Debug:", r)
+            return False
+
+    def _get_results(self, kv_job) -> Optional[Dict[str, Any]]:
+        r = requests.get(self.server + '/' + kv_job.id)
+        if r.ok:
+            results = r.json()
+            if results['status'] == 'completed':
+                return results
+            else:
+                print(results)
+                return None
+        else:
+            # print(r)
+            return None
     
 
 if __name__ == "__main__":
+    # create and configure a KVClient with server url and port
     kv = KVClient("http://localhost", "8081")
+    # create a job using a pdb file with default configuration (code to configure is not implemented)
     job = KVJob("./1FMO.pdb")
+    # send job to server and wait until completion
     kv.run(job)
-    # print(job.output)
+    # print job results
     print(json.dumps(job.output, indent=2))

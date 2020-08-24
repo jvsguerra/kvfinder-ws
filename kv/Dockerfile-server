@@ -1,0 +1,12 @@
+FROM rust:1.45.2 as builder
+WORKDIR /usr/src/myapp
+COPY . .
+RUN apt-get update && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN cargo install --path . --bin kv_server
+
+
+FROM debian:stretch-slim
+RUN apt-get update && apt-get install -y curl libssl-dev && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/cargo/bin/kv_server /usr/local/bin/kv_server
+CMD ["kv_server"]
+EXPOSE 8081

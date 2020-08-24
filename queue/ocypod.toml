@@ -2,12 +2,11 @@
 host = "0.0.0.0"
 port = 8023
 log_level = "debug"
-max_body_size = "1MiB"
+max_body_size = "2MiB"
 #timeout_check_interval = "1m"
 #retry_check_interval = "30s"
 #expiry_check_interval = "1h"
-
-next_job_delay = "5s"
+#next_job_delay = "5s"
 
 [redis]
 url = "redis://ocypod-redis"

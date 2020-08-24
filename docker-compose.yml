@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+  kv-server:
+    build: 
+      context: ./kv
+      dockerfile: Dockerfile-server
+    depends_on: 
+      - "ocypod" 
+    ports:
+      - 8081:8081
+
+
+  kv-worker:
+    build: 
+        context: ./kv
+        dockerfile: Dockerfile-worker
+    depends_on: 
+      - "ocypod"  
+    volumes:
+      - kvfinder-jobs:/jobs
+
+
+  ocypod:
+    image: davechallis/ocypod:latest
+    volumes:
+      - ./queue/ocypod.toml:/etc/ocypod.toml:ro
+    depends_on: 
+      - "ocypod-redis"
+    command: /etc/ocypod.toml
+    ports:
+      - 8023:8023
+
+  ocypod-redis:
+    image: redis:6
+    # ports:
+    #   - 6379:6379
+    volumes:
+      - ocypod-redis-data:/data
+
+volumes:
+  ocypod-redis-data:
+    driver: local
+  kvfinder-jobs:
+    driver: local

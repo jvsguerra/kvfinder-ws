@@ -1,0 +1,23 @@
+FROM rust:1.45.2 as worker-builder
+WORKDIR /usr/src/myapp
+COPY . .
+RUN apt-get update && apt-get install -y libssl-dev && rm -rf /var/lib/apt/lists/*
+RUN cargo install --path . --bin kv_worker
+
+
+FROM debian:stretch-slim as parkvfinder-builder
+WORKDIR /usr/src/
+RUN apt-get update && apt-get install -y git gcc make && rm -rf /var/lib/apt/lists/* 
+RUN git clone https://github.com/LBC-LNBio/parKVFinder --branch v1.0
+RUN cd parKVFinder && make
+
+
+FROM debian:stretch-slim
+RUN apt-get update && apt-get install -y libgomp1 libssl-dev && rm -rf /var/lib/apt/lists/* 
+COPY --from=worker-builder /usr/local/cargo/bin/kv_worker /usr/local/bin/kv_worker
+COPY --from=parkvfinder-builder /usr/src/parKVFinder/parKVFinder /usr/local/parKVFinder/parKVFinder
+COPY --from=parkvfinder-builder /usr/src/parKVFinder/dictionary /usr/local/parKVFinder/dictionary
+ENV KVFinder_PATH=/usr/local/parKVFinder 
+CMD ["kv_worker", "/usr/local/parKVFinder/", "/jobs"]
+
+

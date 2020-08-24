@@ -224,7 +224,8 @@ mod kv {
         }
 
         pub fn get_job() -> Result<JobInput, reqwest::Error> {
-            let j: JobInput = reqwest::get("http://0.0.0.0:8023/queue/dev/job")?.json()?;
+            // let j: JobInput = reqwest::get("http://0.0.0.0:8023/queue/kvfinder/job")?.json()?;
+            let j: JobInput = reqwest::get("http://ocypod:8023/queue/kvfinder/job")?.json()?;
             Ok(j)
         }
 
@@ -236,7 +237,8 @@ mod kv {
 
         pub fn submit_result(id: u32, output: super::Output) -> Result<u32, reqwest::Error> {
             let client = reqwest::Client::new();
-            let url = format!("http://0.0.0.0:8023/job/{}", id);
+            // let url = format!("http://0.0.0.0:8023/job/{}", id);
+            let url = format!("http://ocypod:8023/job/{}", id);
             let data = JobOutput {
                 status: String::from("completed"),
                 output: output,
@@ -268,12 +270,37 @@ mod kv {
             expires_after: String,
         }
 
+
+        #[derive(Serialize, Deserialize)]
+        struct QueueConfig<'a> {
+            timeout: &'a str,
+            expires_after: &'a str,
+            retries: i32,
+        }
+        
+
         pub fn hello() -> impl Responder {
             "KVFinder Web"
         }
+
+
+        pub fn create_ocypod_queue(queue_name: &str, timeout: &str, expires_after: &str, retries: i32) {
+            let client = reqwest::Client::new();
+            let queue_url = format!("http://ocypod:8023/queue/{}", queue_name);
+            let queue_config = QueueConfig { timeout, expires_after, retries };
+            let res = client.put(&queue_url)
+                .json(&queue_config)
+                .send();
+            // match res {
+            //     Ok(_) => HttpResponse::Ok().json(json!({"id":data.tags[0]})),
+            //     Err(e) => HttpResponse::InternalServerError().body(format!("{:?}", e)),
+            // }
+        }
         
         fn get_queue_id(tag_id: &String) -> Result<Option<u32>, reqwest::Error> {
-            let url = format!("http://0.0.0.0:8023/tag/{}", tag_id);
+            // let url = format!("http://0.0.0.0:8023/tag/{}", tag_id);
+            let url = format!("http://ocypod:8023/tag/{}", tag_id);
+
             // ids because in theory could be more than one with the same tag, BUT if this happen there is an error 
             // if tag_id (hash64) not found in queue Ok(None)
             // if request fail return Err (possible problem in queue server)
@@ -285,7 +312,8 @@ mod kv {
         fn get_job(tag_id: String) -> Result<Option<Job>, reqwest::Error> {
             let queue_id = get_queue_id(&tag_id);
             let job = |queue_id| {
-                let url = format!("http://0.0.0.0:8023/job/{}?fields=status,output,created_at,started_at,ended_at,expires_after", queue_id);
+                // let url = format!("http://0.0.0.0:8023/job/{}?fields=status,output,created_at,started_at,ended_at,expires_after", queue_id);
+                let url = format!("http://ocypod:8023/job/{}?fields=status,output,created_at,started_at,ended_at,expires_after", queue_id);
                 let mut j: Job = reqwest::get(url.as_str())?.json()?;
                 j.id = tag_id;
                 Ok(Some(j))
@@ -320,7 +348,8 @@ mod kv {
             };
             let create_job = || {
                 let client = reqwest::Client::new();
-                let res = client.post("http://0.0.0.0:8023/queue/dev/job")
+                // let res = client.post("http://0.0.0.0:8023/queue/kvfinder/job")
+                let res = client.post("http://ocypod:8023/queue/kvfinder/job")
                     .json(&data)
                     .send();
                 match res {
