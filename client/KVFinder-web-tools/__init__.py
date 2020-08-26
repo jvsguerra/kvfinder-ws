@@ -1,3 +1,6 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 '''
 PyMOL Demo Plugin
 
@@ -62,38 +65,40 @@ def make_dialog():
     ### Dialog Buttons ###
     ######################
 
-    # callback for the "Browse" button
-    def browse_filename():
-        filename = getSaveFileNameWithExt(
-            dialog, 'Save As...', filter='PNG File (*.png)')
-        if filename:
-            form.input_filename.setText(filename)
-
-
-
     # hook up dialog buttons callbacks
-    form.button_run.clicked.connect(KVFinderWeb.run)
+    form.button_run.clicked.connect(KVFinderWeb.Buttons.run)
     form.button_exit.clicked.connect(dialog.close)
-    form.button_restore.clicked.connect(KVFinderWeb.restore)
-    form.button_grid.clicked.connect(KVFinderWeb.show_grid)
+    form.button_restore.clicked.connect(KVFinderWeb.Buttons.restore)
+    form.button_grid.clicked.connect(KVFinderWeb.Buttons.show_grid)
 
     return dialog
 
 
 class KVFinderWeb():
     
-    # Methods
-    @staticmethod
-    def run():
-        id = 1 
-        print(f'\nRunning KVFinder-web for job id: {id}\n')
+    class Buttons():
+        
+        # Methods
+        @staticmethod
+        def run():
+            id = 1 # dummy id value
+            print(f'\nRunning KVFinder-web for job id: {id}\n')
+            # TODO: 
+            # - integrate client.py 
+            # - check in ./KVFinder-web for the id
+            # - if complete load results
 
-    @staticmethod
-    def show_grid():
-        print('Showing Grid for current parameters ...\n')
-        pass
+        @staticmethod
+        def show_grid():
+            print('Showing Grid for current parameters ...\n')
 
-    @staticmethod
-    def restore():
-        print('Restoring values ...\n')
-        pass
+        @staticmethod
+        def restore():
+            print('Restoring values ...\n')
+
+    # callback for the "Browse" button
+    def browse_filename():
+        filename = getSaveFileNameWithExt(
+            dialog, 'Save As...', filter='PNG File (*.png)')
+        if filename:
+            form.input_filename.setText(filename)

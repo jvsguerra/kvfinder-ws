@@ -6,16 +6,16 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1038</width>
-    <height>674</height>
+    <width>1033</width>
+    <height>698</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string notr="true">PyMOL Demo Plugin</string>
+   <string notr="true">PyMOL KVFinder-web Tools</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="description">
+    <widget class="QLabel" name="main_description">
      <property name="enabled">
       <bool>true</bool>
      </property>
@@ -33,14 +33,14 @@
      </property>
      <property name="font">
       <font>
-       <pointsize>9</pointsize>
+       <pointsize>10</pointsize>
       </font>
      </property>
      <property name="layoutDirection">
       <enum>Qt::LeftToRight</enum>
      </property>
      <property name="styleSheet">
-      <string notr="true">background-color: #aaaaaa;color:black; padding: 20px</string>
+      <string notr="true">background-color: #d3d3d3;color:black; padding: 20px</string>
      </property>
      <property name="text">
       <string notr="true">KVFinder-web software identifies and describes cavities in a target biomolecular structure using a dual probe system.
@@ -82,7 +82,7 @@ The description includes spatial and constitutional characterization. The spatia
       <attribute name="title">
        <string>Main</string>
       </attribute>
-      <widget class="QGroupBox" name="gridGroupBox">
+      <widget class="QGroupBox" name="parameters">
        <property name="geometry">
         <rect>
          <x>10</x>
@@ -105,13 +105,13 @@ The description includes spatial and constitutional characterization. The spatia
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="2" column="0">
-         <widget class="QFrame" name="horizontalFrame_4">
+         <widget class="QFrame" name="hframe4">
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_19">
+            <widget class="QLabel" name="volume_cutoff_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -128,21 +128,21 @@ The description includes spatial and constitutional characterization. The spatia
               </font>
              </property>
              <property name="mouseTracking">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
              <property name="text">
-              <string>Volume Cutoff (A):</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Volume Cutoff (Å³):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::PlainText</enum>
+              <enum>Qt::RichText</enum>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_6">
+            <widget class="QDoubleSpinBox" name="volume_cutoff">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -176,13 +176,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="0" column="0" colspan="2">
-         <widget class="QFrame" name="horizontalFrame_6">
+         <widget class="QFrame" name="hframe1">
           <layout class="QHBoxLayout" name="horizontalLayout_7">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_12">
+            <widget class="QLabel" name="input_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -213,10 +213,10 @@ The description includes spatial and constitutional characterization. The spatia
             </widget>
            </item>
            <item>
-            <widget class="QComboBox" name="comboBox_2"/>
+            <widget class="QComboBox" name="input"/>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_4">
+            <widget class="QPushButton" name="refresh_input">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -241,13 +241,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="4" column="0" colspan="3">
-         <widget class="QFrame" name="horizontalFrame_8">
+         <widget class="QFrame" name="hframe7">
           <layout class="QHBoxLayout" name="horizontalLayout_9">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_14">
+            <widget class="QLabel" name="output_dir_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -278,14 +278,23 @@ The description includes spatial and constitutional characterization. The spatia
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="input_filename_3">
+            <widget class="QLineEdit" name="output_dir_path">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+               <kerning>true</kerning>
+              </font>
+             </property>
              <property name="text">
               <string notr="true"/>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="button_browse_3">
+            <widget class="QPushButton" name="button_browse">
              <property name="font">
               <font>
                <pointsize>10</pointsize>
@@ -304,13 +313,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QFrame" name="horizontalFrame_3">
+         <widget class="QFrame" name="hframe3">
           <layout class="QHBoxLayout" name="horizontalLayout_4">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_18">
+            <widget class="QLabel" name="probe_out_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -327,21 +336,21 @@ The description includes spatial and constitutional characterization. The spatia
               </font>
              </property>
              <property name="mouseTracking">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
              <property name="text">
-              <string>Probe Out (A):</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Probe Out (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::PlainText</enum>
+              <enum>Qt::RichText</enum>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+            <widget class="QDoubleSpinBox" name="probe_out">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -375,13 +384,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QFrame" name="horizontalFrame_7">
+         <widget class="QFrame" name="hframe2">
           <layout class="QHBoxLayout" name="horizontalLayout_8">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_21">
+            <widget class="QLabel" name="probe_in_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -398,21 +407,21 @@ The description includes spatial and constitutional characterization. The spatia
               </font>
              </property>
              <property name="mouseTracking">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
              <property name="text">
-              <string>Probe In (A):</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Probe In (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::PlainText</enum>
+              <enum>Qt::RichText</enum>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+            <widget class="QDoubleSpinBox" name="probe_in">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -446,13 +455,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="2" column="1">
-         <widget class="QFrame" name="horizontalFrame_5">
+         <widget class="QFrame" name="hframe5">
           <layout class="QHBoxLayout" name="horizontalLayout_6">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_20">
+            <widget class="QLabel" name="removal_distance_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -469,21 +478,21 @@ The description includes spatial and constitutional characterization. The spatia
               </font>
              </property>
              <property name="mouseTracking">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <property name="frameShape">
               <enum>QFrame::NoFrame</enum>
              </property>
              <property name="text">
-              <string>Removal Distance (A):</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Removal Distance (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::PlainText</enum>
+              <enum>Qt::RichText</enum>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+            <widget class="QDoubleSpinBox" name="removal_distance">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -520,13 +529,13 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item row="3" column="0" colspan="2">
-         <widget class="QFrame" name="horizontalFrame_10">
+         <widget class="QFrame" name="hframe6">
           <layout class="QHBoxLayout" name="horizontalLayout_11">
            <property name="sizeConstraint">
             <enum>QLayout::SetNoConstraint</enum>
            </property>
            <item>
-            <widget class="QLabel" name="label_16">
+            <widget class="QLabel" name="output_base_name_label">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -557,7 +566,16 @@ The description includes spatial and constitutional characterization. The spatia
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="input_filename_5">
+            <widget class="QLineEdit" name="base_name">
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+               <kerning>true</kerning>
+              </font>
+             </property>
              <property name="text">
               <string notr="true"/>
              </property>
@@ -573,31 +591,69 @@ The description includes spatial and constitutional characterization. The spatia
       <attribute name="title">
        <string>Search Space</string>
       </attribute>
-     </widget>
-     <widget class="QWidget" name="results">
-      <attribute name="title">
-       <string>Results</string>
-      </attribute>
-      <widget class="QTabWidget" name="tabWidget">
+      <widget class="QGroupBox" name="box_adjustment">
        <property name="geometry">
         <rect>
          <x>10</x>
          <y>10</y>
          <width>991</width>
-         <height>471</height>
+         <height>231</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Box adjustment</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+      <widget class="QGroupBox" name="ligand_adjustment">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>250</y>
+         <width>991</width>
+         <height>231</height>
+        </rect>
+       </property>
+       <property name="title">
+        <string>Ligand adjustment</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>false</bool>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="results">
+      <attribute name="title">
+       <string>Results</string>
+      </attribute>
+      <widget class="QTabWidget" name="results_tabs">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>991</width>
+         <height>481</height>
         </rect>
        </property>
        <property name="currentIndex">
         <number>0</number>
        </property>
-       <widget class="QWidget" name="available">
+       <widget class="QWidget" name="jobs">
         <attribute name="title">
-         <string>Available Results</string>
+         <string>Job Status</string>
         </attribute>
        </widget>
        <widget class="QWidget" name="descriptors">
         <attribute name="title">
-         <string>Descritors</string>
+         <string>Descriptors</string>
         </attribute>
        </widget>
       </widget>
@@ -606,80 +662,59 @@ The description includes spatial and constitutional characterization. The spatia
       <attribute name="title">
        <string>About</string>
       </attribute>
-      <widget class="QLabel" name="description_2">
+      <widget class="QTextBrowser" name="text">
        <property name="enabled">
         <bool>true</bool>
        </property>
        <property name="geometry">
         <rect>
-         <x>10</x>
-         <y>10</y>
+         <x>5</x>
+         <y>11</y>
          <width>1001</width>
          <height>481</height>
         </rect>
        </property>
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="font">
-        <font>
-         <pointsize>9</pointsize>
-         <weight>50</weight>
-         <italic>false</italic>
-         <bold>false</bold>
-         <kerning>true</kerning>
-        </font>
-       </property>
-       <property name="layoutDirection">
-        <enum>Qt::LeftToRight</enum>
+       <property name="cursor" stdset="0">
+        <cursorShape>IBeamCursor</cursorShape>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: #aaaaaa;color:black; padding: 20px</string>
+        <string notr="true">background-color: #d3d3d3;color:black; padding: 20px</string>
        </property>
-       <property name="text">
-        <string notr="true">PyMOL KVFinder-web Tools integrates PyMOL (http://PyMOL.org/) with KVFinder-web &lt;website&gt;.
-
-In the simplest case to run KVFinder-web:
-
-1) Load a target biomolecular structure into PyMOL.
-2) Start PyMOL KVFinder-web Tools plugin.
-3) Click the &quot;Run KVFinder-web&quot; button.
-
-parKVFinder and PyMOL parKVFinder Tools was developed by:
-- Joao Victor da Silva Guerra
-- Helder Veras Filho
-- Leandro Oliveira Bortot
-- Rodrigo Vargas Honorato
-- Jose Geraldo de Carvalho Pereira
-- Paulo Sergio Lopes de Oliveira (paulo.oliveira@lnbio.cnpem.br)
-
-Brazilian Center for Research in Energy and Materials - CNPEM
-Brazilian Biosciences National Laboratory - LNBio
-
-Please refer and cite the original paper if you use it in a publication.
-
-Citation:
-    &lt;paper&gt;
-
-Citation for PyMOL may be found here:
-    http://pymol.sourceforge.net/faq.html#CITE</string>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
        </property>
-       <property name="textFormat">
-        <enum>Qt::PlainText</enum>
+       <property name="html">
+        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:10pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;PyMOL KVFinder-web Tools integrates PyMOL (&lt;a href=&quot;http://PyMOL.org/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://PyMOL.org/&lt;/span&gt;&lt;/a&gt;) with KVFinder-web.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;In the simplest case to run KVFinder-web:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;1) Load a target biomolecular structure into PyMOL.&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;2) Start PyMOL KVFinder-web Tools plugin.&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;3) Click the &amp;quot;Run KVFinder-web&amp;quot; button.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;parKVFinder and PyMOL KVFinder-web Tools was developed by:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- João Victor da Silva Guerra&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- Helder Veras Filho&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- Leandro Oliveira Bortot&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- Rodrigo Vargas Honorato&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- José Geraldo de Carvalho Pereira&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;- Paulo Sergio Lopes de Oliveira (paulo.oliveira@lnbio.cnpem.br)&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Brazilian Center for Research in Energy and Materials - CNPEM&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Brazilian Biosciences National Laboratory - LNBio&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Please refer and cite the parKVFinder paper if you use it in a publication.&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Citation:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;    &amp;lt;paper&amp;gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Citation for PyMOL may be found here:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;    &lt;a href=&quot;http://pymol.sourceforge.net/faq.html#CITE&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#0000ff;&quot;&gt;http://pymol.sourceforge.net/faq.html#CITE&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
-       <property name="alignment">
-        <set>Qt::AlignJustify|Qt::AlignVCenter</set>
-       </property>
-       <property name="wordWrap">
+       <property name="openExternalLinks">
         <bool>true</bool>
        </property>
       </widget>
@@ -687,14 +722,14 @@ Citation for PyMOL may be found here:
     </widget>
    </item>
    <item>
-    <widget class="Line" name="line">
+    <widget class="Line" name="dialog_separator">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
     </widget>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="dialog_buttons">
      <item>
       <widget class="QPushButton" name="button_run">
        <property name="text">
@@ -733,16 +768,16 @@ Citation for PyMOL may be found here:
   <tabstop>button_restore</tabstop>
   <tabstop>button_exit</tabstop>
   <tabstop>tabs</tabstop>
-  <tabstop>comboBox_2</tabstop>
-  <tabstop>pushButton_4</tabstop>
-  <tabstop>doubleSpinBox_5</tabstop>
-  <tabstop>doubleSpinBox_2</tabstop>
-  <tabstop>doubleSpinBox_6</tabstop>
-  <tabstop>doubleSpinBox_4</tabstop>
-  <tabstop>input_filename_5</tabstop>
-  <tabstop>input_filename_3</tabstop>
-  <tabstop>button_browse_3</tabstop>
-  <tabstop>tabWidget</tabstop>
+  <tabstop>input</tabstop>
+  <tabstop>refresh_input</tabstop>
+  <tabstop>probe_in</tabstop>
+  <tabstop>probe_out</tabstop>
+  <tabstop>volume_cutoff</tabstop>
+  <tabstop>removal_distance</tabstop>
+  <tabstop>base_name</tabstop>
+  <tabstop>output_dir_path</tabstop>
+  <tabstop>button_browse</tabstop>
+  <tabstop>results_tabs</tabstop>
  </tabstops>
  <resources/>
  <connections/>
