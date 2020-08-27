@@ -26,7 +26,7 @@ def run_plugin_gui():
     global dialog
 
     if dialog is None:
-        dialog = KVFinderWeb().dialog
+        dialog = KVFinderWeb().gui
 
     dialog.show()
 
@@ -37,23 +37,20 @@ class KVFinderWeb(object):
         super(KVFinderWeb, self).__init__()
         self.initUI()
 
-
     def initUI(self):
         # entry point to PyMOL's API
         from pymol import cmd
 
         # pymol.Qt provides the PyQt5 interface
-        from PyQt5 import QtCore
         from pymol.Qt import QtWidgets
-        from pymol.Qt.utils import loadUi
-        from pymol.Qt.utils import getSaveFileNameWithExt
+        from pymol.Qt.utils import loadUi, getSaveFileNameWithExt
 
         # create a new Window
-        self.dialog = QtWidgets.QDialog()
+        self.gui = QtWidgets.QMainWindow()
 
         # populate the Window from our *.ui file which was created with the Qt Designer
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
-        self.form = loadUi(uifile, self.dialog)
+        self.form = loadUi(uifile, self.gui)
 
         ######################
         ### Dialog Buttons ###
@@ -61,14 +58,14 @@ class KVFinderWeb(object):
 
         # hook up dialog buttons callbacks
         self.form.button_run.clicked.connect(self.Buttons.run)
-        self.form.button_exit.clicked.connect(self.dialog.close)
+        self.form.button_exit.clicked.connect(self.gui.close)
         self.form.button_restore.clicked.connect(self.Buttons.restore)
         self.form.button_grid.clicked.connect(self.Buttons.show_grid)
 
         # return dialog
 
 
-    class Buttons():
+    class Buttons(object):
         
         # Methods
         @staticmethod
@@ -99,6 +96,6 @@ class KVFinderWeb(object):
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
-    dialog = KVFinderWeb().dialog
+    dialog = KVFinderWeb().gui
     dialog.show()
     sys.exit(app.exec_())
