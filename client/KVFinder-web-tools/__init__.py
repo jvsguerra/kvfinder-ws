@@ -6,6 +6,36 @@ from __future__ import print_function
 
 import os, sys
 
+# DEBUG flag
+DEBUG=True
+
+
+# global reference to avoid garbage collection of our dialog
+dialog = None
+
+
+class Default(object):
+
+    def __init__(self):
+        super(Default, self).__init__()
+        #######################
+        ### Main Parameters ###
+        #######################
+        self.probe_in = 1.4
+        self.probe_out = 4.0
+        self.removal_distance = 2.4
+        self.volume_cutoff = 5.0
+        self.base_name = "output"
+        self.output_dir_path = os.getcwd()
+        #######################
+        ###  Search Space   ###
+        #######################
+        # self.
+        #######################
+        ###     Results     ###
+        #######################
+        # self.
+
 
 def __init_plugin__(app=None):
     '''
@@ -15,10 +45,6 @@ def __init_plugin__(app=None):
     addmenuitemqt('KVFinder-web Tools', run_plugin_gui)
 
 
-# global reference to avoid garbage collection of our dialog
-dialog = None
-
-
 def run_plugin_gui():
     '''
     Open our custom dialog
@@ -26,18 +52,23 @@ def run_plugin_gui():
     global dialog
 
     if dialog is None:
-        dialog = KVFinderWeb().gui
+        dialog = KVFinderWeb()
 
-    dialog.show()
+    dialog.gui.show()
 
 
 class KVFinderWeb(object):
 
     def __init__(self):
         super(KVFinderWeb, self).__init__()
-        self.initUI()
+        self.initGUI()
+        self.restore()
 
-    def initUI(self):
+    def initGUI(self):
+        """
+        Qt elements are located in self.gui and self.form
+        """
+
         # entry point to PyMOL's API
         from pymol import cmd
 
@@ -50,40 +81,49 @@ class KVFinderWeb(object):
 
         # populate the Window from our *.ui file which was created with the Qt Designer
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
-        self.form = loadUi(uifile, self.gui)
+        loadUi(uifile, self.gui)
 
-        ######################
-        ### Dialog Buttons ###
-        ######################
+        #######################
+        ###   Gui Buttons   ###
+        #######################
 
         # hook up dialog buttons callbacks
-        self.form.button_run.clicked.connect(self.Buttons.run)
-        self.form.button_exit.clicked.connect(self.gui.close)
-        self.form.button_restore.clicked.connect(self.Buttons.restore)
-        self.form.button_grid.clicked.connect(self.Buttons.show_grid)
-
-        # return dialog
+        self.gui.button_run.clicked.connect(self.run)
+        self.gui.button_exit.clicked.connect(self.gui.close)
+        self.gui.button_restore.clicked.connect(self.restore)
+        self.gui.button_grid.clicked.connect(self.show_grid)
 
 
-    class Buttons(object):
+    ### Button Methods
+    def run(self):
+        id = 1 # dummy id value
+        print(f'\nRunning KVFinder-web for job id: {id}\n')
+        # TODO: 
+        # - integrate client.py 
+        # - check in ./KVFinder-web for the id
+        # - if complete load results
+
+
+    def show_grid(self):
+        print('Showing Grid for current parameters ...\n')
+
+
+    def restore(self):
+        print('Restoring values ...\n')
+        self.gui.base_name.setText(Default().base_name)
+        self.gui.probe_in.setValue(Default().probe_in)
+        self.gui.probe_out.setValue(Default().probe_out)
+        self.gui.volume_cutoff.setValue(Default().volume_cutoff)
+        self.gui.removal_distance.setValue(Default().removal_distance)
+        self.gui.output_dir_path.setText(Default().output_dir_path)
         
-        # Methods
-        @staticmethod
-        def run():
-            id = 1 # dummy id value
-            print(f'\nRunning KVFinder-web for job id: {id}\n')
-            # TODO: 
-            # - integrate client.py 
-            # - check in ./KVFinder-web for the id
-            # - if complete load results
-
-        @staticmethod
-        def show_grid():
-            print('Showing Grid for current parameters ...\n')
-
-        @staticmethod
-        def restore():
-            print('Restoring values ...\n')
+        if DEBUG:
+            print(f"Base Name: {self.gui.base_name.text()}")
+            print(f"Probe In: {self.gui.probe_in.value()}")
+            print(f"Probe Out: {self.gui.probe_out.value()}")
+            print(f"Volume Cutoff: {self.gui.volume_cutoff.value()}")
+            print(f"Removal Distance: {self.gui.removal_distance.value()}")
+            print(f"Output Directory: {self.gui.output_dir_path.text()}")
 
     # callback for the "Browse" button
     def browse_filename():
@@ -96,6 +136,6 @@ class KVFinderWeb(object):
 if __name__ == '__main__':
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
-    dialog = KVFinderWeb().gui
-    dialog.show()
+    dialog = KVFinderWeb()
+    dialog.gui.show()
     sys.exit(app.exec_())

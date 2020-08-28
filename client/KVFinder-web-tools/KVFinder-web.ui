@@ -16,7 +16,7 @@
    </font>
   </property>
   <property name="cursor">
-   <cursorShape>IBeamCursor</cursorShape>
+   <cursorShape>ArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
