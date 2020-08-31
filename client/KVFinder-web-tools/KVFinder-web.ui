@@ -19,7 +19,7 @@
    <cursorShape>ArrowCursor</cursorShape>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>PyMOL KVFinder-web Tools</string>
   </property>
   <widget class="QWidget" name="gui">
    <widget class="Line" name="dialog_separator">
@@ -702,7 +702,7 @@ The description includes spatial and constitutional characterization. The spatia
        </rect>
       </property>
       <property name="currentIndex">
-       <number>1</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="jobs">
        <attribute name="title">
