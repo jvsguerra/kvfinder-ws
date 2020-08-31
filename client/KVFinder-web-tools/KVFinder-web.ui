@@ -676,9 +676,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="hframe10">
         <item>
-         <widget class="QLabel" name="label">
+         <widget class="QLabel" name="min_x_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum X (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -691,7 +691,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox">
+         <widget class="QDoubleSpinBox" name="min_x">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -714,9 +714,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <layout class="QHBoxLayout" name="hframe11">
         <item>
-         <widget class="QLabel" name="label_2">
+         <widget class="QLabel" name="max_x_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum X (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -729,7 +729,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_2">
+         <widget class="QDoubleSpinBox" name="max_x">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -752,9 +752,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <layout class="QHBoxLayout" name="hframe12">
         <item>
-         <widget class="QLabel" name="label_3">
+         <widget class="QLabel" name="min_y_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum Y (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -767,7 +767,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_3">
+         <widget class="QDoubleSpinBox" name="min_y">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -790,9 +790,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <layout class="QHBoxLayout" name="hframe13">
         <item>
-         <widget class="QLabel" name="label_4">
+         <widget class="QLabel" name="max_y_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum Y (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -805,7 +805,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_4">
+         <widget class="QDoubleSpinBox" name="max_y">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -828,9 +828,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <layout class="QHBoxLayout" name="hframe14">
         <item>
-         <widget class="QLabel" name="label_5">
+         <widget class="QLabel" name="min_z_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Minimum Z (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -843,7 +843,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_5">
+         <widget class="QDoubleSpinBox" name="min_z">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -866,9 +866,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_7">
+       <layout class="QHBoxLayout" name="hframe15">
         <item>
-         <widget class="QLabel" name="label_6">
+         <widget class="QLabel" name="max_z_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Maximum Z (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -881,7 +881,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_6">
+         <widget class="QDoubleSpinBox" name="max_z">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -890,55 +890,6 @@ The description includes spatial and constitutional characterization. The spatia
           </property>
           <property name="singleStep">
            <double>0.100000000000000</double>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="gridLayoutWidget">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>30</y>
-         <width>341</width>
-         <height>21</height>
-        </rect>
-       </property>
-       <layout class="QGridLayout" name="gridLayout">
-        <item row="0" column="0">
-         <widget class="QLabel" name="box_adjustment_label">
-          <property name="enabled">
-           <bool>true</bool>
-          </property>
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-            <weight>50</weight>
-            <italic>false</italic>
-            <bold>false</bold>
-            <kerning>true</kerning>
-           </font>
-          </property>
-          <property name="mouseTracking">
-           <bool>false</bool>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::NoFrame</enum>
-          </property>
-          <property name="text">
-           <string>Select residues and press Draw Box:</string>
-          </property>
-          <property name="textFormat">
-           <enum>Qt::PlainText</enum>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -953,7 +904,7 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+       <layout class="QHBoxLayout" name="hframe8">
         <item>
          <widget class="QPushButton" name="button_draw_box">
           <property name="text">
@@ -962,14 +913,14 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="buttonb">
+         <widget class="QPushButton" name="button_delete_box">
           <property name="text">
            <string>Delete Box</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="pushButton_3">
+         <widget class="QPushButton" name="button_redraw_box">
           <property name="enabled">
            <bool>false</bool>
           </property>
@@ -989,9 +940,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_8">
+       <layout class="QHBoxLayout" name="hframe16">
         <item>
-         <widget class="QLabel" name="label_7">
+         <widget class="QLabel" name="angle1_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Angle 1 (°):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -1004,7 +955,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_7">
+         <widget class="QDoubleSpinBox" name="angle1">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -1027,9 +978,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_9">
+       <layout class="QHBoxLayout" name="hframe17">
         <item>
-         <widget class="QLabel" name="label_8">
+         <widget class="QLabel" name="angle2_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Angle 2 (°):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -1042,7 +993,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_8">
+         <widget class="QDoubleSpinBox" name="angle2">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -1065,9 +1016,9 @@ The description includes spatial and constitutional characterization. The spatia
          <height>31</height>
         </rect>
        </property>
-       <layout class="QHBoxLayout" name="horizontalLayout_11">
+       <layout class="QHBoxLayout" name="hframe9">
         <item>
-         <widget class="QLabel" name="label_9">
+         <widget class="QLabel" name="padding_label">
           <property name="text">
            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Padding (Å):&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
@@ -1080,7 +1031,7 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
         <item>
-         <widget class="QDoubleSpinBox" name="doubleSpinBox_9">
+         <widget class="QDoubleSpinBox" name="padding">
           <property name="decimals">
            <number>1</number>
           </property>
@@ -1096,6 +1047,49 @@ The description includes spatial and constitutional characterization. The spatia
          </widget>
         </item>
        </layout>
+      </widget>
+      <widget class="QLabel" name="box_adjustment_label">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>20</x>
+         <y>30</y>
+         <width>339</width>
+         <height>17</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>50</weight>
+         <italic>false</italic>
+         <bold>false</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="mouseTracking">
+        <bool>false</bool>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="text">
+        <string>Select residues and press Draw Box:</string>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::PlainText</enum>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
       </widget>
      </widget>
      <widget class="QGroupBox" name="ligand_adjustment">
@@ -1119,7 +1113,7 @@ The description includes spatial and constitutional characterization. The spatia
       <property name="checked">
        <bool>true</bool>
       </property>
-      <widget class="QFrame" name="hframe8">
+      <widget class="QFrame" name="hframe18">
        <property name="geometry">
         <rect>
          <x>20</x>
@@ -1190,7 +1184,7 @@ The description includes spatial and constitutional characterization. The spatia
         </item>
        </layout>
       </widget>
-      <widget class="QFrame" name="hframe9">
+      <widget class="QFrame" name="hframe19">
        <property name="geometry">
         <rect>
          <x>20</x>
