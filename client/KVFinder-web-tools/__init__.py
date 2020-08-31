@@ -30,8 +30,9 @@ class _Default(object):
         #######################
         ###  Search Space   ###
         #######################
-        # self.ligand_adjustment = False
-        # self.box_adjustment = False
+        self.ligand_adjustment = False
+        self.ligand_cutoff = 5.0
+        self.box_adjustment = False
         #######################
         ###     Results     ###
         #######################
@@ -74,8 +75,6 @@ class PyMOLKVFinderWebTools(object):
         self.initialize_gui()
         # Restore Default Parameters
         self.restore()
-        # Restore PDB input
-        self.refresh(self.gui.input)
 
 
     def initialize_gui(self):
@@ -108,6 +107,7 @@ class PyMOLKVFinderWebTools(object):
         # hook up Parameters button callbacks
         self.gui.button_browse.clicked.connect(self.select_directory)
         self.gui.refresh_input.clicked.connect(lambda: self.refresh(self.gui.input))
+        self.gui.refresh_ligand.clicked.connect(lambda: self.refresh(self.gui.ligand))
 
 
     ### Button Methods
@@ -135,7 +135,11 @@ class PyMOLKVFinderWebTools(object):
         Callback for the "Restore Default Values" button
         """
         print('Restoring values ...\n')
-        # Main tab
+        # Restore PDB and ligand input
+        self.refresh(self.gui.input)
+        # self.refresh(self.gui.ligand) # TODO: think what is better
+
+        ### Main tab ###
         self.gui.base_name.setText(self._default.base_name)
         self.gui.probe_in.setValue(self._default.probe_in)
         self.gui.probe_out.setValue(self._default.probe_out)
@@ -143,11 +147,14 @@ class PyMOLKVFinderWebTools(object):
         self.gui.removal_distance.setValue(self._default.removal_distance)
         self.gui.output_dir_path.setText(self._default.output_dir_path)
 
-        # Search Space Tab
-        self.gui.box_adjustment.setChecked(False)
-        self.gui.ligand_adjustment.setChecked(False)
+        ### Search Space Tab ###
+        # Box Adjustment
+        self.gui.box_adjustment.setChecked(self._default.box_adjustment)
+        # Ligand Adjustment
+        self.gui.ligand_adjustment.setChecked(self._default.ligand_adjustment)
+        self.gui.ligand.clear()
+        self.gui.ligand_cutoff.setValue(self._default.ligand_cutoff)
 
-        
         if DEBUG:
             print(f"Base Name: {self.gui.base_name.text()}")
             print(f"Probe In: {self.gui.probe_in.value()}")
@@ -157,6 +164,7 @@ class PyMOLKVFinderWebTools(object):
             print(f"Output Directory: {self.gui.output_dir_path.text()}")
             print(f"Box adjustment: {self.gui.box_adjustment.isChecked()}")
             print(f"Ligand adjustment: {self.gui.ligand_adjustment.isChecked()}")
+            print(f"Ligand Cutoff: {self.gui.ligand_cutoff.value()}")
 
     
     def refresh(self, combo_box):
@@ -164,7 +172,7 @@ class PyMOLKVFinderWebTools(object):
         Callback for the "Refresh" button
         """
         from pymol import cmd
-        
+
         combo_box.clear()
         for item in cmd.get_names("all"):
             if cmd.get_type(item) == "object:molecule" and \
