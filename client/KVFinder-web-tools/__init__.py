@@ -135,7 +135,6 @@ class PyMOLKVFinderWebTools(object):
         self.gui.refresh_ligand.clicked.connect(lambda: self.refresh(self.gui.ligand))
 
 
-    ### Button Methods
     def run(self):
         """
         Callback for the "Run KVFinder-web" button
@@ -164,8 +163,170 @@ class PyMOLKVFinderWebTools(object):
     def show_grid(self):
         """
         Callback for the "Show Grid" button
+        - Get minimum and maximum coordinates of the KVFinder-web 3D-grid, dependent on selected parameters.
+        :return: Call draw_grid function with minimum and maximum coordinates or return Error.
         """
-        print('Showing Grid for current parameters ...\n')
+        from pymol import cmd
+        from pymol.Qt import QtWidgets
+
+        global x, y, z
+
+        if self.gui.input.count() > 0:
+            # Get minimum and maximum dimensions of target PDB
+            pdb = self.gui.input.currentText()
+            ([min_x, min_y, min_z], [max_x, max_y, max_z]) = cmd.get_extent(pdb)
+
+            # Get Probe Out value
+            probe_out = self.gui.probe_out.value()
+            probe_out = round(probe_out - round(probe_out, 4) % round(0.6, 4), 1)
+
+            # Prepare dimensions
+            min_x = round(min_x - (min_x % 0.6), 1) - probe_out
+            min_y = round(min_y - (min_y % 0.6), 1) - probe_out
+            min_z = round(min_z - (min_z % 0.6), 1) - probe_out
+            max_x = round(max_x - (max_x % 0.6) + 0.6, 1) + probe_out
+            max_y = round(max_y - (max_y % 0.6) + 0.6, 1) + probe_out
+            max_z = round(max_z - (max_z % 0.6) + 0.6, 1) + probe_out
+
+            # Get center of each dimension (x, y, z)
+            x = (min_x + max_x) / 2
+            y = (min_y + max_y) / 2
+            z = (min_z + max_z) / 2
+
+            # Draw Grid
+            self.draw_grid(min_x, max_x, min_y, max_y, min_z, max_z)
+        else:
+            QtWidgets.QMessageBox.critical(self.gui, "Error", "Load a PDB file!")
+            return
+
+
+    def draw_grid(self, min_x, max_x, min_y, max_y, min_z, max_z):
+        """
+        Draw Grid in PyMOL.
+        :param min_x: minimum X coordinate.
+        :param max_x: maximum X coordinate.
+        :param min_y: minimum Y coordinate.
+        :param max_y: maximum Y coordinate.
+        :param min_z: minimum Z coordinate.
+        :param max_z: maximum Z coordinate.
+        :return: grid object in PyMOL.
+        """
+        from pymol import cmd
+        from math import sin, cos
+        
+        # Prepare dimensions
+        angle1 = 0.0
+        angle2 = 0.0
+        min_x = x - min_x
+        max_x = max_x - x 
+        min_y = y - min_y 
+        max_y = max_y - y 
+        min_z = z - min_z 
+        max_z = max_z - z 
+
+        # Get positions of grid vertices
+        # P1
+        x1 = -min_x * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + x
+
+        y1 = -min_y * cos(angle1) + (-min_z) * sin(angle1) + y
+
+        z1 = min_x * sin(angle2) + min_y * sin(angle1) * cos(angle2) - min_z * cos(angle1) * cos(angle2) + z
+        
+        # P2
+        x2 = max_x * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + x
+
+        y2 = (-min_y) * cos(angle1) + (-min_z) * sin(angle1) + y
+        
+        z2 = (-max_x) * sin(angle2) - (-min_y) * sin(angle1) * cos(angle2) + (-min_z) * cos(angle1) * cos(angle2) + z
+        
+        # P3
+        x3 = (-min_x) * cos(angle2) - max_y * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + x
+
+        y3 = max_y * cos(angle1) + (-min_z) * sin(angle1) + y
+
+        z3 = -(-min_x) * sin(angle2) - max_y * sin(angle1) * cos(angle2) + (-min_z) * cos(angle1) * cos(angle2) + z
+        
+        # P4
+        x4 = (-min_x) * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + max_z * cos(angle1) * sin(angle2) + x
+
+        y4 = (-min_y) * cos(angle1) + max_z * sin(angle1) + y
+
+        z4 = -(-min_x) * sin(angle2) - (-min_y) * sin(angle1) * cos(angle2) + max_z * cos(angle1) * cos(angle2) + z
+
+        
+        # P5
+        x5 = max_x * cos(angle2) - max_y * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + x
+
+        y5 = max_y * cos(angle1) + (-min_z) * sin(angle1) + y
+
+        z5 = (-max_x) * sin(angle2) - max_y * sin(angle1) * cos(angle2) + (-min_z) * cos(angle1) * cos(angle2) + z
+        
+        # P6
+        x6 = max_x * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + max_z * cos(angle1) * sin(angle2) + x
+
+        y6 = (-min_y) * cos(angle1) + max_z * sin(angle1) + y
+
+        z6 = (-max_x) * sin(angle2) - (-min_y) * sin(angle1) * cos(angle2) + max_z * cos(angle1) * cos(angle2) + z
+        
+        # P7
+        x7 = (-min_x) * cos(angle2) - max_y * sin(angle1) * sin(angle2) + max_z * cos(angle1) * sin(angle2) + x
+
+        y7 = max_y * cos(angle1) + max_z * sin(angle1) + y
+
+        z7 = -(-min_x) * sin(angle2) - max_y * sin(angle1) * cos(angle2) + max_z * cos(angle1) * cos(angle2) + z
+
+        # P8
+        x8 = max_x * cos(angle2) - max_y * sin(angle1) * sin(angle2) + max_z * cos(angle1) * sin(angle2) + x
+
+        y8 = max_y * cos(angle1) + max_z * sin(angle1) + y
+
+        z8 = (-max_x) * sin(angle2) - max_y * sin(angle1) * cos(angle2) + max_z * cos(angle1) * cos(angle2) + z        
+
+        # Create box object
+        if "grid" in cmd.get_names("objects"):
+            cmd.delete("grid")
+
+        # Create vertices
+        cmd.pseudoatom("grid", name="v2", pos=[x2, y2, z2], color="white")
+        cmd.pseudoatom("grid", name="v3", pos=[x3, y3, z3], color="white")
+        cmd.pseudoatom("grid", name="v4", pos=[x4, y4, z4], color="white")
+        cmd.pseudoatom("grid", name="v5", pos=[x5, y5, z5], color="white")
+        cmd.pseudoatom("grid", name="v6", pos=[x6, y6, z6], color="white")
+        cmd.pseudoatom("grid", name="v7", pos=[x7, y7, z7], color="white")
+        cmd.pseudoatom("grid", name="v8", pos=[x8, y8, z8], color="white")
+
+        # Connect vertices
+        cmd.select("vertices", "(name v3,v7)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v2,v6)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v5,v8)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v2,v5)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v4,v6)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v4,v7)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v3,v5)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v6,v8)")
+        cmd.bond("vertices", "vertices")
+        cmd.select("vertices", "(name v7,v8)")
+        cmd.bond("vertices", "vertices")
+        cmd.pseudoatom("grid", name="v1x", pos=[x1, y1, z1], color='white')
+        cmd.pseudoatom("grid", name="v2x", pos=[x2, y2, z2], color='white')
+        cmd.select("vertices", "(name v1x,v2x)")
+        cmd.bond("vertices", "vertices")
+        cmd.pseudoatom("grid", name="v1y", pos=[x1, y1, z1], color='white')
+        cmd.pseudoatom("grid", name="v3y", pos=[x3, y3, z3], color='white')
+        cmd.select("vertices", "(name v1y,v3y)")
+        cmd.bond("vertices", "vertices")
+        cmd.pseudoatom("grid", name="v4z", pos=[x4, y4, z4], color='white')
+        cmd.pseudoatom("grid", name="v1z", pos=[x1, y1, z1], color='white')
+        cmd.select("vertices", "(name v1z,v4z)")
+        cmd.bond("vertices", "vertices")
+        cmd.delete("vertices")
 
 
     def restore(self):
@@ -177,7 +338,10 @@ class PyMOLKVFinderWebTools(object):
         print('Restoring values ...\n')
         # Restore PDB and ligand input
         self.refresh(self.gui.input)
-        # self.refresh(self.gui.ligand) # TODO: think what is better
+        self.refresh(self.gui.ligand) # TODO: think what is better
+        
+        # Delete grid
+        cmd.delete("grid")
 
         ### Main tab ###
         self.gui.base_name.setText(self._default.base_name)
@@ -435,6 +599,7 @@ class PyMOLKVFinderWebTools(object):
 
 
     def redraw_box(self):
+        print('Redrawing box ...\n')
         pass
 
 
