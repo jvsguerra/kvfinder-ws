@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os, sys
+from PyQt5.QtWidgets import QMainWindow
 
 # DEBUG flag
 DEBUG = True
@@ -66,20 +67,24 @@ def run_plugin_gui():
     Open our custom dialog
     '''
     global dialog
-
+    
     if dialog is None:
         dialog = PyMOLKVFinderWebTools()
 
-    dialog.gui.show()
+    dialog.show()
 
 
-class PyMOLKVFinderWebTools(object):
+class PyMOLKVFinderWebTools(QMainWindow):
     """
     PyMOL KVFinder Web Tools
 
     - creates Graphical User Interface in PyQt5 in PyMOL viewer
     - defines and connects callbacks for Qt elements
-
+    TODO:
+    - Run process in the background to check job status
+    - Run process to clean job ids from ./KVFinder-web in the background
+    - Prepare Run function
+    - Prepare Results window
     """
     def __init__(self):
         super(PyMOLKVFinderWebTools, self).__init__()
@@ -93,11 +98,15 @@ class PyMOLKVFinderWebTools(object):
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
+        print("__init__ KVFinderWebTools")
+        # TODO: 
+        # - function to check jobs id availables
+        # - start checking jobs id status -> if complete: download and delete job id
 
 
     def initialize_gui(self):
         """
-        Qt elements are located in self.gui
+        Qt elements are located in self
         """
         # entry point to PyMOL's API
         from pymol import cmd
@@ -106,33 +115,33 @@ class PyMOLKVFinderWebTools(object):
         from pymol.Qt.utils import loadUi, getSaveFileNameWithExt
 
         # create a new QMainWindow
-        self.gui = QtWidgets.QMainWindow()
+        # self = QtWidgets.QMainWindow()
 
         # populate the QMainWindow from our *.ui file
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
-        loadUi(uifile, self.gui)
+        loadUi(uifile, self)
 
         ########################
         ### Buttons Callback ###
         ########################
 
         # hook up QMainWindow buttons callbacks
-        self.gui.button_run.clicked.connect(self.run)
-        self.gui.button_exit.clicked.connect(self.gui.close)
-        self.gui.button_restore.clicked.connect(self.restore)
-        self.gui.button_grid.clicked.connect(self.show_grid)
+        self.button_run.clicked.connect(self.run)
+        self.button_exit.clicked.connect(self.close)
+        self.button_restore.clicked.connect(self.restore)
+        self.button_grid.clicked.connect(self.show_grid)
         
         # hook up Parameters button callbacks
-        self.gui.button_browse.clicked.connect(self.select_directory)
-        self.gui.refresh_input.clicked.connect(lambda: self.refresh(self.gui.input))
+        self.button_browse.clicked.connect(self.select_directory)
+        self.refresh_input.clicked.connect(lambda: self.refresh(self.input))
         
         # hook up Search Space button callbacks
         # Box Adjustment
-        self.gui.button_draw_box.clicked.connect(self.set_box)
-        self.gui.button_delete_box.clicked.connect(self.delete_box)
-        self.gui.button_redraw_box.clicked.connect(self.redraw_box)
+        self.button_draw_box.clicked.connect(self.set_box)
+        self.button_delete_box.clicked.connect(self.delete_box)
+        self.button_redraw_box.clicked.connect(self.redraw_box)
         # Ligand Adjustment
-        self.gui.refresh_ligand.clicked.connect(lambda: self.refresh(self.gui.ligand))
+        self.refresh_ligand.clicked.connect(lambda: self.refresh(self.ligand))
 
 
     def run(self):
@@ -144,15 +153,15 @@ class PyMOLKVFinderWebTools(object):
         
         if DEBUG:
             print(self.x, self.y, self.z)
-            print(f"Base Name: {self.gui.base_name.text()}")
-            print(f"Probe In: {self.gui.probe_in.value()}")
-            print(f"Probe Out: {self.gui.probe_out.value()}")
-            print(f"Volume Cutoff: {self.gui.volume_cutoff.value()}")
-            print(f"Removal Distance: {self.gui.removal_distance.value()}")
-            print(f"Output Directory: {self.gui.output_dir_path.text()}")
-            print(f"Box adjustment: {self.gui.box_adjustment.isChecked()}")
-            print(f"Ligand adjustment: {self.gui.ligand_adjustment.isChecked()}")
-            print(f"Ligand Cutoff: {self.gui.ligand_cutoff.value()}")
+            print(f"Base Name: {self.base_name.text()}")
+            print(f"Probe In: {self.probe_in.value()}")
+            print(f"Probe Out: {self.probe_out.value()}")
+            print(f"Volume Cutoff: {self.volume_cutoff.value()}")
+            print(f"Removal Distance: {self.removal_distance.value()}")
+            print(f"Output Directory: {self.output_dir_path.text()}")
+            print(f"Box adjustment: {self.box_adjustment.isChecked()}")
+            print(f"Ligand adjustment: {self.ligand_adjustment.isChecked()}")
+            print(f"Ligand Cutoff: {self.ligand_cutoff.value()}")
            
         # TODO: 
         # - integrate client.py 
@@ -171,13 +180,13 @@ class PyMOLKVFinderWebTools(object):
 
         global x, y, z
 
-        if self.gui.input.count() > 0:
+        if self.input.count() > 0:
             # Get minimum and maximum dimensions of target PDB
-            pdb = self.gui.input.currentText()
+            pdb = self.input.currentText()
             ([min_x, min_y, min_z], [max_x, max_y, max_z]) = cmd.get_extent(pdb)
 
             # Get Probe Out value
-            probe_out = self.gui.probe_out.value()
+            probe_out = self.probe_out.value()
             probe_out = round(probe_out - round(probe_out, 4) % round(0.6, 4), 1)
 
             # Prepare dimensions
@@ -196,7 +205,7 @@ class PyMOLKVFinderWebTools(object):
             # Draw Grid
             self.draw_grid(min_x, max_x, min_y, max_y, min_z, max_z)
         else:
-            QtWidgets.QMessageBox.critical(self.gui, "Error", "Load a PDB file!")
+            QtWidgets.QMessageBox.critical(self, "Error", "Load a PDB file!")
             return
 
 
@@ -337,29 +346,29 @@ class PyMOLKVFinderWebTools(object):
 
         print('Restoring values ...\n')
         # Restore PDB and ligand input
-        self.refresh(self.gui.input)
-        self.refresh(self.gui.ligand) # TODO: think what is better
+        self.refresh(self.input)
+        self.refresh(self.ligand) # TODO: think what is better
         
         # Delete grid
         cmd.delete("grid")
 
         ### Main tab ###
-        self.gui.base_name.setText(self._default.base_name)
-        self.gui.probe_in.setValue(self._default.probe_in)
-        self.gui.probe_out.setValue(self._default.probe_out)
-        self.gui.volume_cutoff.setValue(self._default.volume_cutoff)
-        self.gui.removal_distance.setValue(self._default.removal_distance)
-        self.gui.output_dir_path.setText(self._default.output_dir_path)
+        self.base_name.setText(self._default.base_name)
+        self.probe_in.setValue(self._default.probe_in)
+        self.probe_out.setValue(self._default.probe_out)
+        self.volume_cutoff.setValue(self._default.volume_cutoff)
+        self.removal_distance.setValue(self._default.removal_distance)
+        self.output_dir_path.setText(self._default.output_dir_path)
 
         ### Search Space Tab ###
         # Box Adjustment
-        self.gui.box_adjustment.setChecked(self._default.box_adjustment)
-        self.gui.padding.setValue(self._default.padding)
+        self.box_adjustment.setChecked(self._default.box_adjustment)
+        self.padding.setValue(self._default.padding)
         self.delete_box()
         # Ligand Adjustment
-        self.gui.ligand_adjustment.setChecked(self._default.ligand_adjustment)
-        self.gui.ligand.clear()
-        self.gui.ligand_cutoff.setValue(self._default.ligand_cutoff)
+        self.ligand_adjustment.setChecked(self._default.ligand_adjustment)
+        self.ligand.clear()
+        self.ligand_cutoff.setValue(self._default.ligand_cutoff)
 
     
     def refresh(self, combo_box):
@@ -395,7 +404,7 @@ class PyMOLKVFinderWebTools(object):
         if fname:
             fname = QDir.toNativeSeparators(fname)
             if os.path.isdir(fname):
-                self.gui.output_dir_path.setText(fname)
+                self.output_dir_path.setText(fname)
 
         return
 
@@ -422,22 +431,22 @@ class PyMOLKVFinderWebTools(object):
         self.z = (min_z + max_z) / 2
 
         # Set Box variables
-        self.gui.min_x.setValue(round(self.x - (min_x - self.gui.padding.value()), 1))
-        self.gui.max_x.setValue(round((max_x + self.gui.padding.value()) - self.x, 1))
-        self.gui.min_y.setValue(round(self.y - (min_y - self.gui.padding.value()), 1))
-        self.gui.max_y.setValue(round((max_y + self.gui.padding.value()) - self.y, 1))
-        self.gui.min_z.setValue(round(self.z - (min_z - self.gui.padding.value()), 1))
-        self.gui.max_z.setValue(round((max_z + self.gui.padding.value()) - self.z, 1))
-        self.gui.angle1.setValue(0)
-        self.gui.angle2.setValue(0)
-        # self.gui.padding.setValue(self.gui.padding.value())
+        self.min_x.setValue(round(self.x - (min_x - self.padding.value()), 1))
+        self.max_x.setValue(round((max_x + self.padding.value()) - self.x, 1))
+        self.min_y.setValue(round(self.y - (min_y - self.padding.value()), 1))
+        self.max_y.setValue(round((max_y + self.padding.value()) - self.y, 1))
+        self.min_z.setValue(round(self.z - (min_z - self.padding.value()), 1))
+        self.max_z.setValue(round((max_z + self.padding.value()) - self.z, 1))
+        self.angle1.setValue(0)
+        self.angle2.setValue(0)
+        # self.padding.setValue(self.padding.value())
 
         # Draw box
         self.draw_box()
 
         # Enable/Disable buttons
-        self.gui.button_draw_box.setEnabled(False)
-        self.gui.button_redraw_box.setEnabled(True)
+        self.button_draw_box.setEnabled(False)
+        self.button_redraw_box.setEnabled(True)
 
 
     def draw_box(self):
@@ -450,65 +459,65 @@ class PyMOLKVFinderWebTools(object):
         from pymol import cmd
 
         # Convert angle # TODO: check if it is necessary
-        angle1 = (self.gui.angle1.value() / 180.0) * pi
-        angle2 = (self.gui.angle2.value() / 180.0) * pi
+        angle1 = (self.angle1.value() / 180.0) * pi
+        angle2 = (self.angle2.value() / 180.0) * pi
 
         # Get positions of box vertices
         # P1
-        x1 = -self.gui.min_x.value() * cos(angle2) - (-self.gui.min_y.value()) * sin(angle1) * sin(angle2) + (-self.gui.min_z.value()) * cos(angle1) * sin(angle2) + self.x
+        x1 = -self.min_x.value() * cos(angle2) - (-self.min_y.value()) * sin(angle1) * sin(angle2) + (-self.min_z.value()) * cos(angle1) * sin(angle2) + self.x
 
-        y1 = -self.gui.min_y.value() * cos(angle1) + (-self.gui.min_z.value()) * sin(angle1) + self.y
+        y1 = -self.min_y.value() * cos(angle1) + (-self.min_z.value()) * sin(angle1) + self.y
         
-        z1 = self.gui.min_x.value() * sin(angle2) + self.gui.min_y.value() * sin(angle1) * cos(angle2) - self.gui.min_z.value() * cos(angle1) * cos(angle2) + self.z
+        z1 = self.min_x.value() * sin(angle2) + self.min_y.value() * sin(angle1) * cos(angle2) - self.min_z.value() * cos(angle1) * cos(angle2) + self.z
 
         # P2
-        x2 = self.gui.max_x.value() * cos(angle2) - (-self.gui.min_y.value()) * sin(angle1) * sin(angle2) + (-self.gui.min_z.value()) * cos(angle1) * sin(angle2) + self.x
+        x2 = self.max_x.value() * cos(angle2) - (-self.min_y.value()) * sin(angle1) * sin(angle2) + (-self.min_z.value()) * cos(angle1) * sin(angle2) + self.x
         
-        y2 = (-self.gui.min_y.value()) * cos(angle1) + (-self.gui.min_z.value()) * sin(angle1) + self.y
+        y2 = (-self.min_y.value()) * cos(angle1) + (-self.min_z.value()) * sin(angle1) + self.y
         
-        z2 = (-self.gui.max_x.value()) * sin(angle2) - (-self.gui.min_y.value()) * sin(angle1) * cos(angle2) + (-self.gui.min_z.value()) * cos(angle1) * cos(angle2) + self.z
+        z2 = (-self.max_x.value()) * sin(angle2) - (-self.min_y.value()) * sin(angle1) * cos(angle2) + (-self.min_z.value()) * cos(angle1) * cos(angle2) + self.z
 
         # P3
-        x3 = (-self.gui.min_x.value()) * cos(angle2) - self.gui.max_y.value() * sin(angle1) * sin(angle2) + (-self.gui.min_z.value()) * cos(angle1) * sin(angle2) + self.x
+        x3 = (-self.min_x.value()) * cos(angle2) - self.max_y.value() * sin(angle1) * sin(angle2) + (-self.min_z.value()) * cos(angle1) * sin(angle2) + self.x
 
-        y3 = self.gui.max_y.value() * cos(angle1) + (-self.gui.min_z.value()) * sin(angle1) + self.y
+        y3 = self.max_y.value() * cos(angle1) + (-self.min_z.value()) * sin(angle1) + self.y
 
-        z3 = -(-self.gui.min_x.value()) * sin(angle2) - self.gui.max_y.value() * sin(angle1) * cos(angle2) + (-self.gui.min_z.value()) * cos(angle1) * cos(angle2) + self.z
+        z3 = -(-self.min_x.value()) * sin(angle2) - self.max_y.value() * sin(angle1) * cos(angle2) + (-self.min_z.value()) * cos(angle1) * cos(angle2) + self.z
 
         # P4
-        x4 = (-self.gui.min_x.value()) * cos(angle2) - (-self.gui.min_y.value()) * sin(angle1) * sin(angle2) + self.gui.max_z.value() * cos(angle1) * sin(angle2) + self.x
+        x4 = (-self.min_x.value()) * cos(angle2) - (-self.min_y.value()) * sin(angle1) * sin(angle2) + self.max_z.value() * cos(angle1) * sin(angle2) + self.x
         
-        y4 = (-self.gui.min_y.value()) * cos(angle1) + self.gui.max_z.value() * sin(angle1) + self.y
+        y4 = (-self.min_y.value()) * cos(angle1) + self.max_z.value() * sin(angle1) + self.y
         
-        z4 = -(-self.gui.min_x.value()) * sin(angle2) - (-self.gui.min_y.value()) * sin(angle1) * cos(angle2) + self.gui.max_z.value() * cos(angle1) * cos(angle2) + self.z
+        z4 = -(-self.min_x.value()) * sin(angle2) - (-self.min_y.value()) * sin(angle1) * cos(angle2) + self.max_z.value() * cos(angle1) * cos(angle2) + self.z
 
         # P5
-        x5 = self.gui.max_x.value() * cos(angle2) - self.gui.max_y.value() * sin(angle1) * sin(angle2) + (-self.gui.min_z.value()) * cos(angle1) * sin(angle2) + self.x
+        x5 = self.max_x.value() * cos(angle2) - self.max_y.value() * sin(angle1) * sin(angle2) + (-self.min_z.value()) * cos(angle1) * sin(angle2) + self.x
         
-        y5 = self.gui.max_y.value() * cos(angle1) + (-self.gui.min_z.value()) * sin(angle1) + self.y
+        y5 = self.max_y.value() * cos(angle1) + (-self.min_z.value()) * sin(angle1) + self.y
 
-        z5 = (-self.gui.max_x.value()) * sin(angle2) - self.gui.max_y.value() * sin(angle1) * cos(angle2) + (-self.gui.min_z.value()) * cos(angle1) * cos(angle2) + self.z
+        z5 = (-self.max_x.value()) * sin(angle2) - self.max_y.value() * sin(angle1) * cos(angle2) + (-self.min_z.value()) * cos(angle1) * cos(angle2) + self.z
 
         # P6
-        x6 = self.gui.max_x.value() * cos(angle2) - (-self.gui.min_y.value()) * sin(angle1) * sin(angle2) + self.gui.max_z.value() * cos(angle1) * sin(angle2) + self.x
+        x6 = self.max_x.value() * cos(angle2) - (-self.min_y.value()) * sin(angle1) * sin(angle2) + self.max_z.value() * cos(angle1) * sin(angle2) + self.x
         
-        y6 = (-self.gui.min_y.value()) * cos(angle1) + self.gui.max_z.value() * sin(angle1) + self.y
+        y6 = (-self.min_y.value()) * cos(angle1) + self.max_z.value() * sin(angle1) + self.y
         
-        z6 = (-self.gui.max_x.value()) * sin(angle2) - (-self.gui.min_y.value()) * sin(angle1) * cos(angle2) + self.gui.max_z.value() * cos(angle1) * cos(angle2) + self.z
+        z6 = (-self.max_x.value()) * sin(angle2) - (-self.min_y.value()) * sin(angle1) * cos(angle2) + self.max_z.value() * cos(angle1) * cos(angle2) + self.z
 
         # P7
-        x7 = (-self.gui.min_x.value()) * cos(angle2) - self.gui.max_y.value() * sin(angle1) * sin(angle2) + self.gui.max_z.value() * cos(angle1) * sin(angle2) + self.x
+        x7 = (-self.min_x.value()) * cos(angle2) - self.max_y.value() * sin(angle1) * sin(angle2) + self.max_z.value() * cos(angle1) * sin(angle2) + self.x
 
-        y7 = self.gui.max_y.value() * cos(angle1) + self.gui.max_z.value() * sin(angle1) + self.y
+        y7 = self.max_y.value() * cos(angle1) + self.max_z.value() * sin(angle1) + self.y
 
-        z7 = -(-self.gui.min_x.value()) * sin(angle2) - self.gui.max_y.value() * sin(angle1) * cos(angle2) + self.gui.max_z.value() * cos(angle1) * cos(angle2) + self.z
+        z7 = -(-self.min_x.value()) * sin(angle2) - self.max_y.value() * sin(angle1) * cos(angle2) + self.max_z.value() * cos(angle1) * cos(angle2) + self.z
 
         # P8
-        x8 = self.gui.max_x.value() * cos(angle2) - self.gui.max_y.value() * sin(angle1) * sin(angle2) + self.gui.max_z.value() * cos(angle1) * sin(angle2) + self.x
+        x8 = self.max_x.value() * cos(angle2) - self.max_y.value() * sin(angle1) * sin(angle2) + self.max_z.value() * cos(angle1) * sin(angle2) + self.x
         
-        y8 = self.gui.max_y.value() * cos(angle1) + self.gui.max_z.value() * sin(angle1) + self.y
+        y8 = self.max_y.value() * cos(angle1) + self.max_z.value() * sin(angle1) + self.y
         
-        z8 = (-self.gui.max_x.value()) * sin(angle2) - self.gui.max_y.value() * sin(angle1) * cos(angle2) + self.gui.max_z.value() * cos(angle1) * cos(angle2) + self.z
+        z8 = (-self.max_x.value()) * sin(angle2) - self.max_y.value() * sin(angle1) * cos(angle2) + self.max_z.value() * cos(angle1) * cos(angle2) + self.z
 
         # Create box object
         pymol.stored.list = []
@@ -584,23 +593,31 @@ class PyMOLKVFinderWebTools(object):
         cmd.delete("box")
 
         # Set Box variables in the interface
-        self.gui.min_x.setValue(self._default.min_x)
-        self.gui.max_x.setValue(self._default.max_x)
-        self.gui.min_y.setValue(self._default.min_y)
-        self.gui.max_y.setValue(self._default.max_y)
-        self.gui.min_z.setValue(self._default.min_z)
-        self.gui.max_z.setValue(self._default.max_z)
-        self.gui.angle1.setValue(self._default.angle1)
-        self.gui.angle2.setValue(self._default.angle2)
+        self.min_x.setValue(self._default.min_x)
+        self.max_x.setValue(self._default.max_x)
+        self.min_y.setValue(self._default.min_y)
+        self.max_y.setValue(self._default.max_y)
+        self.min_z.setValue(self._default.min_z)
+        self.max_z.setValue(self._default.max_z)
+        self.angle1.setValue(self._default.angle1)
+        self.angle2.setValue(self._default.angle2)
 
         # Change state of buttons in the interface
-        self.gui.button_draw_box.setEnabled(True)
-        self.gui.button_redraw_box.setEnabled(False)
+        self.button_draw_box.setEnabled(True)
+        self.button_redraw_box.setEnabled(False)
 
 
     def redraw_box(self):
         print('Redrawing box ...\n')
         pass
+
+    
+    def closeEvent(self, event):
+        """
+        Add one step to closeEvent from QMainWindow
+        """
+        global dialog
+        dialog = None
 
 
 def KVFinderWebTools():
@@ -609,8 +626,8 @@ def KVFinderWebTools():
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
     dialog = PyMOLKVFinderWebTools()
-    dialog.gui.setWindowTitle('KVFinder-web Tools')
-    dialog.gui.show()
+    dialog.setWindowTitle('KVFinder-web Tools')
+    dialog.show()
     sys.exit(app.exec_())
 
 
