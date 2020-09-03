@@ -141,6 +141,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.button_draw_box.clicked.connect(self.set_box)
         self.button_delete_box.clicked.connect(self.delete_box)
         self.button_redraw_box.clicked.connect(self.redraw_box)
+        self.button_box_adjustment_help.clicked.connect(self.box_adjustment_help)
         # Ligand Adjustment
         self.refresh_ligand.clicked.connect(lambda: self.refresh(self.ligand))
 
@@ -731,6 +732,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 
         # Redraw box
         self.draw_box()
+
+
+    def box_adjustment_help(self):
+        from pymol.Qt import QtWidgets, QtCore
+        text = QtCore.QCoreApplication.translate("KVFinderWeb", u"<html><head/><body><p align=\"justify\"><span style=\" font-weight:600; text-decoration: underline;\">Box Adjustment mode:</span></p><p align=\"justify\">- Create a selection (optional);</p><p align=\"justify\">- Define a <span style=\" font-weight:600;\">Padding</span> (optional);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Draw Box</span> button.</p><p align=\"justify\"><br/><span style=\"text-decoration: underline;\">Customize your <span style=\" font-weight:600;\">box</span></span>:</p><p align=\"justify\">- Change one item at a time (e.g. <span style=\" font-style:italic;\">Padding</span>, <span style=\" font-style:italic;\">Minimum X</span>, <span style=\" font-style:italic;\">Maximum X</span>, ...);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Redraw Box</span> button.<br/></p><p><span style=\" font-weight:400; text-decoration: underline;\">Delete </span><span style=\" text-decoration: underline;\">box</span><span style=\" font-weight:400; text-decoration: underline;\">:</span></p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Delete Box</span> button.<br/></p><p align=\"justify\"><span style=\"text-decoration: underline;\">Colors of the <span style=\" font-weight:600;\">box</span> object:</span></p><p align=\"justify\">- <span style=\" font-weight:600;\">Red</span> corresponds to <span style=\" font-weight:600;\">X</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Green</span> corresponds to <span style=\" font-weight:600;\">Y</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Blue</span> corresponds to <span style=\" font-weight:600;\">Z</span> axis.</p></body></html>", None)
+        QtWidgets.QMessageBox.information(self, "Help", text)
 
     
     def closeEvent(self, event):
