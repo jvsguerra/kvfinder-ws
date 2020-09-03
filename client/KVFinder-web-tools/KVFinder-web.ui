@@ -670,7 +670,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_2">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>110</y>
          <width>271</width>
          <height>31</height>
@@ -735,7 +735,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_3">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>140</y>
          <width>271</width>
          <height>31</height>
@@ -776,7 +776,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_4">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>200</y>
          <width>271</width>
          <height>31</height>
@@ -817,7 +817,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_5">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>170</y>
          <width>271</width>
          <height>31</height>
@@ -858,7 +858,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_6">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>230</y>
          <width>271</width>
          <height>31</height>
@@ -899,7 +899,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_7">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>260</y>
          <width>271</width>
          <height>31</height>
@@ -940,7 +940,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>50</y>
          <width>271</width>
          <height>31</height>
@@ -976,7 +976,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_8">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>290</y>
          <width>271</width>
          <height>31</height>
@@ -1017,7 +1017,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_9">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>320</y>
          <width>271</width>
          <height>31</height>
@@ -1058,7 +1058,7 @@ The description includes spatial and constitutional characterization. The spatia
       <widget class="QWidget" name="horizontalLayoutWidget_10">
        <property name="geometry">
         <rect>
-         <x>50</x>
+         <x>40</x>
          <y>80</y>
          <width>271</width>
          <height>31</height>
@@ -1102,7 +1102,7 @@ The description includes spatial and constitutional characterization. The spatia
        </property>
        <property name="geometry">
         <rect>
-         <x>20</x>
+         <x>10</x>
          <y>30</y>
          <width>339</width>
          <height>17</height>
@@ -1137,6 +1137,55 @@ The description includes spatial and constitutional characterization. The spatia
        </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QLabel" name="box_adjustment_helptip">
+       <property name="geometry">
+        <rect>
+         <x>960</x>
+         <y>30</y>
+         <width>21</width>
+         <height>21</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>50</weight>
+         <italic>false</italic>
+         <bold>false</bold>
+         <kerning>true</kerning>
+        </font>
+       </property>
+       <property name="cursor">
+        <cursorShape>WhatsThisCursor</cursorShape>
+       </property>
+       <property name="contextMenuPolicy">
+        <enum>Qt::DefaultContextMenu</enum>
+       </property>
+       <property name="acceptDrops">
+        <bool>false</bool>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;justify&quot;&gt;&lt;span style=&quot; font-weight:600; text-decoration: underline;&quot;&gt;Help - Box Adjustment mode:&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- Create a selection (optional);&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- Define a &lt;span style=&quot; font-weight:600;&quot;&gt;Padding&lt;/span&gt; (optional);&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- Click on &lt;span style=&quot; font-weight:600;&quot;&gt;Draw Box&lt;/span&gt; button.&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;&lt;br/&gt;Customize your &lt;span style=&quot; font-weight:600;&quot;&gt;box&lt;/span&gt;:&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- Change one item at a time (e.g. &lt;span style=&quot; font-style:italic;&quot;&gt;Padding&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;Minimum X&lt;/span&gt;, &lt;span style=&quot; font-style:italic;&quot;&gt;Maximum X&lt;/span&gt;, ...);&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- Click on &lt;span style=&quot; font-weight:600;&quot;&gt;Redraw Box&lt;/span&gt;;&lt;br/&gt;&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;Colors of the &lt;span style=&quot; font-weight:600;&quot;&gt;box&lt;/span&gt; object:&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- &lt;span style=&quot; font-weight:600;&quot;&gt;Red&lt;/span&gt; corresponds to &lt;span style=&quot; font-weight:600;&quot;&gt;X&lt;/span&gt; axis;&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- &lt;span style=&quot; font-weight:600;&quot;&gt;Green&lt;/span&gt; corresponds to &lt;span style=&quot; font-weight:600;&quot;&gt;Y&lt;/span&gt; axis;&lt;/p&gt;&lt;p align=&quot;justify&quot;&gt;- &lt;span style=&quot; font-weight:600;&quot;&gt;Blue&lt;/span&gt; corresponds to &lt;span style=&quot; font-weight:600;&quot;&gt;Z&lt;/span&gt; axis.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
+       <property name="inputMethodHints">
+        <set>Qt::ImhHiddenText</set>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Sunken</enum>
+       </property>
+       <property name="text">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;justify&quot;&gt;&lt;span style=&quot; font-size:12pt; font-weight:600;&quot;&gt;?&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="textFormat">
+        <enum>Qt::RichText</enum>
        </property>
       </widget>
      </widget>
