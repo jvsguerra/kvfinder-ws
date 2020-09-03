@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import os, sys
 from PyQt5.QtWidgets import QMainWindow
+from typing import Optional, Any, Dict
 
 # DEBUG flag
 DEBUG = True
@@ -86,7 +87,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
     - Prepare Run function
     - Prepare Results window
     """
-    def __init__(self):
+    def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
         # Define Default Parameters
         self._default = _Default()
@@ -98,6 +99,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
+        # Define server
+        self.server = f"{server}:{port}"
+
         print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
         # - function to check jobs id availables
@@ -113,9 +117,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # pymol.Qt provides the PyQt5 interface
         from pymol.Qt import QtWidgets
         from pymol.Qt.utils import loadUi, getSaveFileNameWithExt
-
-        # create a new QMainWindow
-        # self = QtWidgets.QMainWindow()
 
         # populate the QMainWindow from our *.ui file
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
@@ -738,6 +739,80 @@ class PyMOLKVFinderWebTools(QMainWindow):
         """
         global dialog
         dialog = None
+
+
+    # TODO: Create Job class
+    class Job(object):
+        def __init__(self, path_protein_pdb: str, path_ligand_pdb: Optional[str]=None):
+            self.id: Optional[str] = None
+            self.input: Optional[Dict[str, Any]] = {}
+            self.output: Optional[Dict[str, Any]] = None 
+            self._add_pdb(path_protein_pdb)
+            if path_ligand_pdb != None:
+                self._add_pdb(path_ligand_pdb, is_ligand=True)
+            self._default_settings()
+
+        @property
+        def kv_pdb(self):
+            if self.output == None:
+                return None
+            else:
+                return self.output["output"]["pdb_kv"]
+
+        @property
+        def report(self):
+            if self.output == None:
+                return None
+            else:
+                return self.output["output"]["report"]
+
+        @property
+        def log(self):
+            if self.output == None:
+                return None
+            else:
+                return self.output["output"]["log"]
+
+        def _add_pdb(self, pdb_fn: str, is_ligand: bool=False):
+            with open(pdb_fn) as f:
+                pdb = f.readlines()
+            if is_ligand:
+                self.input["pdb_ligand"] = pdb
+            else:
+                self.input["pdb"] = pdb
+
+        def _default_settings(self):
+            self.input["settings"] = {}
+            self.input["settings"]["modes"] = {
+                "whole_protein_mode" : True,
+                "box_mode" : False,
+                "resolution_mode" : "Low",
+                "surface_mode" : True,
+                "kvp_mode" : False,
+                "ligand_mode" : False,
+            }
+            self.input["settings"]["step_size"] = {"step_size": 0.0}
+            self.input["settings"]["probes"] = {
+                "probe_in" : 1.4,
+                "probe_out" : 4.0,
+            }
+            self.input["settings"]["cutoffs"] = {
+                "volume_cutoff" : 5.0,
+                "ligand_cutoff" : 5.0,
+                "removal_distance" : 2.4,
+            }
+            self.input["settings"]["visiblebox"] = {
+                "p1" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+                "p2" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+                "p3" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+                "p4" : {"x" : 0.00, "y" : 0.00, "z" : 0.00},
+            }
+            self.input["settings"]["internalbox"] = {
+                "p1" : {"x" : -4.00, "y" : -4.00, "z" : -4.00},
+                "p2" : {"x" : 4.00, "y" : -4.00, "z" : -4.00},
+                "p3" : {"x" : -4.00, "y" : 4.00, "z" : -4.00},
+                "p4" : {"x" : -4.00, "y" : -4.00, "z" : 4.00},
+            }
 
 
 def KVFinderWebTools():
