@@ -98,7 +98,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
-        print("__init__ KVFinderWebTools")
+        print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
         # - function to check jobs id availables
         # - start checking jobs id status -> if complete: download and delete job id
@@ -430,7 +430,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.y = (min_y + max_y) / 2
         self.z = (min_z + max_z) / 2
 
-        # Set Box variables
+        # Set Box variables in interface
         self.min_x.setValue(round(self.x - (min_x - self.padding.value()), 1))
         self.max_x.setValue(round((max_x + self.padding.value()) - self.x, 1))
         self.min_y.setValue(round(self.y - (min_y - self.padding.value()), 1))
@@ -439,7 +439,17 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.max_z.setValue(round((max_z + self.padding.value()) - self.z, 1))
         self.angle1.setValue(0)
         self.angle2.setValue(0)
-        # self.padding.setValue(self.padding.value())
+
+        # Setting background box values
+        self.min_x_set = self.min_x.value()
+        self.max_x_set = self.max_x.value()
+        self.min_y_set = self.min_y.value()
+        self.max_y_set = self.max_y.value()
+        self.min_z_set = self.min_z.value()
+        self.max_z_set = self.max_z.value()
+        self.angle1_set = self.angle1.value()
+        self.angle2_set = self.angle2.value()
+        self.padding_set = self.padding.value()
 
         # Draw box
         self.draw_box()
@@ -447,6 +457,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Enable/Disable buttons
         self.button_draw_box.setEnabled(False)
         self.button_redraw_box.setEnabled(True)
+        self.min_x.setEnabled(True)
+        self.min_y.setEnabled(True)
+        self.min_z.setEnabled(True)
+        self.max_x.setEnabled(True)
+        self.max_y.setEnabled(True)
+        self.max_z.setEnabled(True)
+        self.angle1.setEnabled(True)
+        self.angle2.setEnabled(True)
 
 
     def draw_box(self):
@@ -587,6 +605,15 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.x = 0
         self.y = 0
         self.z = 0
+        # self.min_x_set = 0.0
+        # self.max_x_set = 0.0
+        # self.min_y_set = 0.0
+        # self.max_y_set = 0.0
+        # self.min_z_set = 0.0
+        # self.max_z_set = 0.0
+        # self.angle1_set = 0.0
+        # self.angle2_set = 0.0
+        # self.padding_set = 3.5
 
         # Delete Box and Vertices objects in PyMOL
         cmd.delete("vertices")
@@ -605,11 +632,104 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Change state of buttons in the interface
         self.button_draw_box.setEnabled(True)
         self.button_redraw_box.setEnabled(False)
+        self.min_x.setEnabled(False)
+        self.min_y.setEnabled(False)
+        self.min_z.setEnabled(False)
+        self.max_x.setEnabled(False)
+        self.max_y.setEnabled(False)
+        self.max_z.setEnabled(False)
+        self.angle1.setEnabled(False)
+        self.angle2.setEnabled(False)
 
 
     def redraw_box(self):
-        print('Redrawing box ...\n')
-        pass
+        """
+        Redraw box in PyMOL interface.
+        :param padding: box padding.
+        :return: box object.
+        """
+        from pymol import cmd
+        
+        # Provided a selection
+        if "sele" in cmd.get_names("selections"):
+            # Get dimensions of selected residues
+            ([min_x, min_y, min_z], [max_x, max_y, max_z]) = cmd.get_extent("sele")
+
+            if self.min_x.value() != self.min_x_set or self.max_x.value() != self.max_x_set or self.min_y.value() != self.min_y_set or self.max_y.value() != self.max_y_set or self.min_z.value() != self.min_z_set or self.max_z.value() != self.max_z_set or self.angle1.value() != self.angle1_set or self.angle2.value() != self.angle2_set:
+                self.min_x_set = self.min_x.value()
+                self.max_x_set = self.max_x.value()
+                self.min_y_set = self.min_y.value()
+                self.max_y_set = self.max_y.value()
+                self.min_z_set = self.min_z.value()
+                self.max_z_set = self.max_z.value()
+                self.angle1_set = self.angle1.value()
+                self.angle2_set = self.angle2.value()
+            # Padding or selection altered
+            else:
+                # Get center of each dimension (x, y, z)
+                self.x = (min_x + max_x) / 2
+                self.y = (min_y + max_y) / 2
+                self.z = (min_z + max_z) / 2
+
+                # Set background box values
+                self.min_x_set = round(self.x - (min_x - self.padding.value()), 1) + self.min_x.value() - self.min_x_set
+                self.max_x_set = round((max_x + self.padding.value()) - self.x, 1) + self.max_x.value() - self.max_x_set
+                self.min_y_set = round(self.y - (min_y - self.padding.value()), 1) + self.min_y.value() - self.min_y_set
+                self.max_y_set = round((max_y + self.padding.value()) - self.y, 1) + self.max_y.value() - self.max_y_set
+                self.min_z_set = round(self.z - (min_z - self.padding.value()), 1) + self.min_z.value() - self.min_z_set
+                self.max_z_set = round((max_z + self.padding.value()) - self.z, 1) + self.max_z.value() - self.max_z_set
+                self.angle1_set = 0 + self.angle1.value()
+                self.angle2_set = 0 + self.angle2.value()
+                self.padding_set = self.padding.value()
+        # Not provided a selection
+        else:
+            if self.min_x.value() != self.min_x_set or self.max_x.value() != self.max_x_set or self.min_y.value() != self.min_y_set or self.max_y.value() != self.max_y_set or self.min_z.value() != self.min_z_set or self.max_z.value() != self.max_z_set or self.angle1.value() != self.angle1_set or self.angle2.value() != self.angle2_set:
+                self.min_x_set = self.min_x.value()
+                self.max_x_set = self.max_x.value()
+                self.min_y_set = self.min_y.value()
+                self.max_y_set = self.max_y.value()
+                self.min_z_set = self.min_z.value()
+                self.max_z_set = self.max_z.value()
+                self.angle1_set = self.angle1.value()
+                self.angle2_set = self.angle2.value()
+
+            if self.padding_set != self.padding.value():
+                # Prepare dimensions without old padding
+                min_x = self.padding_set - self.min_x_set
+                max_x = self.max_x_set - self.padding_set
+                min_y = self.padding_set - self.min_y_set
+                max_y = self.max_y_set - self.padding_set
+                min_z = self.padding_set - self.min_z_set
+                max_z = self.max_z_set - self.padding_set
+
+                # Get center of each dimension (x, y, z)
+                self.x = (min_x + max_x) / 2
+                self.y = (min_y + max_y) / 2
+                self.z = (min_z + max_z) / 2
+
+                # Set background box values
+                self.min_x_set = round(self.x - (min_x - self.padding.value()), 1)
+                self.max_x_set = round((max_x + self.padding.value()) - self.x, 1)
+                self.min_y_set = round(self.y - (min_y - self.padding.value()), 1)
+                self.max_y_set = round((max_y + self.padding.value()) - self.y, 1)
+                self.min_z_set = round(self.z - (min_z - self.padding.value()), 1)
+                self.max_z_set = round((max_z + self.padding.value()) - self.z, 1)
+                self.angle1_set = self.angle1.value()
+                self.angle2_set = self.angle2.value()
+                self.padding_set = self.padding.value()
+
+        # Set Box variables in the interface
+        self.min_x.setValue(self.min_x_set)
+        self.max_x.setValue(self.max_x_set)
+        self.min_y.setValue(self.min_y_set)
+        self.max_y.setValue(self.max_y_set)
+        self.min_z.setValue(self.min_z_set)
+        self.max_z.setValue(self.max_z_set)
+        self.angle1.setValue(self.angle1_set)
+        self.angle2.setValue(self.angle2_set)           
+                
+        # Redraw box
+        self.draw_box()
 
     
     def closeEvent(self, event):
