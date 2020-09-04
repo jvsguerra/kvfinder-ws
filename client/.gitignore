@@ -1,3 +1,14 @@
 # Plugin Demo
 pymol2-demo-plugin/
-KVFinder-web-tools/broken-KVFinder-web.ui
+
+# Debuging and Coding
+*.py
+*.toml
+
+# Client core
+!KVFinder-web-tools/__init__.py
+!KVFinder-web-tools/KVFinder-web.ui
+!KVFinder-web-tools/LICENSE
+
+# python3-pip modules
+!requirements.txt
