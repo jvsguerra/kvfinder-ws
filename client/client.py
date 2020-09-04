@@ -115,6 +115,7 @@ if __name__ == "__main__":
     kv = KVClient("http://localhost", "8081")
     # create a job using a pdb file with default configuration (code to configure is not implemented)
     job = KVJob("./examples/1FMO.pdb")
+    # job = KVJob("./examples/1HHP.pdb")
     # send job to server and wait until completion
     kv.run(job)
     # print job results
