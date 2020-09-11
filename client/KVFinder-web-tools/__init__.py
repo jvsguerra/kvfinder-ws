@@ -4,8 +4,9 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os, sys
+import os, sys, json, toml
 from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtCore import QThread, pyqtSignal
 from typing import Optional, Any, Dict
 
 # DEBUG flag
@@ -89,23 +90,44 @@ class PyMOLKVFinderWebTools(QMainWindow):
     """
     def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
+        from PyQt5.QtNetwork import QNetworkAccessManager
+
         # Define Default Parameters
         self._default = _Default()
+        
         # Initialize PyMOLKVFinderWebTools GUI
         self.initialize_gui()
+        
         # Restore Default Parameters
         self.restore()
+        
         # Set box centers
         self.x = 0.0
         self.y = 0.0
         self.z = 0.0
+        
         # Define server
         self.server = f"{server}:{port}"
+        self.network_manager = QNetworkAccessManager()
+        self.network_manager.finished.connect(self.handle_post_response)
 
-        print("\nRunning Background Process to check job status KVFinderWebTools\n")
+        # Create ./KVFinder-web directory for jobs
+        jobs_dir = os.path.join(os.path.expanduser('~'), '.KVFinder-web')
+        try: 
+            os.mkdir(jobs_dir)
+        except FileExistsError:
+            pass
+
+        # Background process to check available jobs status
+        self._check_job_status()
+
+        # Get available jobs
+        self.available_jobs = self._get_available_jobs()
+
+        # print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
         # - function to check jobs id availables
-        # - start checking jobs id status -> if complete: download and delete job id
+        # - start checking jobs id status -> if failed: download and delete job id
 
 
     def initialize_gui(self):
@@ -145,30 +167,115 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Ligand Adjustment
         self.refresh_ligand.clicked.connect(lambda: self.refresh(self.ligand))
 
+    
+    def run(self) -> None:
+        from PyQt5 import QtNetwork
+        from PyQt5.QtCore import QUrl, QJsonDocument
 
-    def run(self):
-        """
-        Callback for the "Run KVFinder-web" button
-        """
-        id = 1 # dummy id value
-        print(f'\nRunning KVFinder-web for job id: {id}\n')
+        print('Running job in KVFinder-web server ...')
         
-        if DEBUG:
-            print(self.x, self.y, self.z)
-            print(f"Base Name: {self.base_name.text()}")
-            print(f"Probe In: {self.probe_in.value()}")
-            print(f"Probe Out: {self.probe_out.value()}")
-            print(f"Volume Cutoff: {self.volume_cutoff.value()}")
-            print(f"Removal Distance: {self.removal_distance.value()}")
-            print(f"Output Directory: {self.output_dir_path.text()}")
-            print(f"Box adjustment: {self.box_adjustment.isChecked()}")
-            print(f"Ligand adjustment: {self.ligand_adjustment.isChecked()}")
-            print(f"Ligand Cutoff: {self.ligand_cutoff.value()}")
-           
+        # Create job
+        self.job = self.Job(pdb='../examples/1FMO.pdb')
+        
+        # Post request
+        try:
+            # Prepare request
+            url = QUrl(f'{self.server}/create')
+            request = QtNetwork.QNetworkRequest(url)
+            request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
+
+            # Prepare data
+            data = QJsonDocument(self.job.input)
+
+            # Post requests
+            self.network_manager.post(request, data.toJson())
+        except Exception as e:
+            print(e)
+
         # TODO: 
         # - integrate client.py 
         # - check in ./KVFinder-web for the id
         # - if complete load results
+
+
+    def handle_post_response(self, reply) -> None:
+        from PyQt5 import QtNetwork
+        # Get QNetworkReply error status
+        er = reply.error()
+        
+        # Handle Post Response
+        if er == QtNetwork.QNetworkReply.NoError:
+            print('Job submitted!')
+            reply = json.loads(str(reply.readAll(), 'utf-8'))
+
+            # Results not available
+            if 'output' not in reply.keys():
+                # Save job id
+                self.job.id = reply['id']
+
+                # Create job directory in ~/.KVFinder-web/
+                job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web/', self.job.id)
+                try:
+                    os.mkdir(job_dn)
+                except FileExistsError:
+                    pass
+
+                # Create job file inside ~/.KVFinder-web/id
+                self.job.status = 'queued'
+                job_fn = os.path.join(job_dn, 'job.toml')
+                with open(job_fn, 'w') as f:
+                    f.write(" # TOML configuration file for KVFinder-web job\n\n")
+                    f.write("title = \"KVFinder-web job file\"\n\n")
+                    f.write(f"status = \"{self.job.status}\"\n\n")
+                    f.write("[files]\n")
+                    f.write(f"pdb = \"{os.path.join(job_dn, 'protein.pdb')}\"\n")
+                    if 'pdb_ligand' in self.job.input.keys():
+                        f.write(f"ligand = \"{os.path.join(job_dn, 'ligand.pdb')}\"\n")
+                    f.write("output = \"/home/jvsguerra\"\n")
+                    f.write("base_name = \"output\"\n")
+                    f.write('\n')
+                    toml.dump(o=self.job.input['settings'], f=f)
+            # Job already sent and results are available
+            else:
+                status = reply["status"]
+                
+                # handle job completed
+                if status == 'completed':
+                    print('Job already submitted and completed!')
+                # handle job not completed
+                else:
+                    print('Job currently running')               
+        
+        else:
+            print("Error ocurred: ", er)
+            print(reply.errorString())
+
+    
+    def _get_available_jobs(self) -> list:       
+        # Get job dir
+        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
+        
+        # Get jobs availables in dir
+        jobs = os.listdir(d)
+
+        return jobs
+
+
+    def _check_job_status(self):
+        # TODO: function to run in the background to check status of jobs
+        self.thread = self.Background()
+        self.thread.start()
+        pass
+
+
+    def _get_results(self):
+        # TODO: function to get and prepare results from server
+        pass
+
+
+    def _show_results(self):
+        # TODO: show results into PyMOL viewer and GUI
+        pass
 
 
     def show_grid(self):
@@ -752,19 +859,82 @@ class PyMOLKVFinderWebTools(QMainWindow):
         dialog = None
 
 
+    class Background(QThread):
+
+        from PyQt5.QtNetwork import QNetworkAccessManager
+        # change_value = pyqtSignal(list)
+        # jobs = list()        
+
+        def run(self):
+            import time
+            while True:
+                # Constantly checking available jobs
+                jobs = self._get_jobs()
+                # self.change_value.emit(jobs)
+
+                for job_id in jobs:
+                    print(job_id)
+                    self._get_results(job_id)
+
+                print(jobs)
+                print("Checking job status ...")
+                time.sleep(4)
+
+
+        def _get_jobs(self) -> list:       
+            # Get job dir
+            d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
+            
+            # Get jobs availables in dir
+            jobs = os.listdir(d)
+
+            return jobs
+
+        
+        def _get_results(self, job_id) -> Optional[Dict[str, Any]]:
+            # from PyQt5 import QtNetwork
+            # from PyQt5.QtCore import QUrl
+
+            # print('Oi')
+            # try:
+            #     network_manager = QtNetwork.QNetworkAccessManager()
+            #     network_manager.finished.connect(self.handle_get_response)
+
+            #     # Prepare request
+            #     url = QUrl(f'http://localhost:8081/{job_id}')
+            #     request = QtNetwork.QNetworkRequest(url)
+
+            #     # Get Request
+            #     network_manager.get(request)
+            # # reply.finished.connect(self.handle_get_response)
+            # except Exception as e:
+            #     print(e)
+        
+        def handle_get_response(self, reply) -> None:
+            # Get QNetwork error status
+            er = reply.error()
+            print(er)
+            
+            # Handle Get Response
+            reply = json.loads(str(self.reply.readAll(), 'utf-8'))
+            print(reply.keys())
+
+
     # TODO: Create Job class
     class Job(object):
-        def __init__(self, path_protein_pdb: str, path_ligand_pdb: Optional[str]=None):
-            self.id: Optional[str] = None
+    
+        def __init__(self, pdb: str, ligand: Optional[str]=None, id: int=None):
+            super().__init__()
+            self.id = id
             self.input: Optional[Dict[str, Any]] = {}
-            self.output: Optional[Dict[str, Any]] = None 
-            self._add_pdb(path_protein_pdb)
-            if path_ligand_pdb != None:
-                self._add_pdb(path_ligand_pdb, is_ligand=True)
-            self._default_settings()
+            self.output: Optional[Dict[str, Any]] = None
+            self._add_pdb(pdb)
+            if ligand is not None:
+                self._add_pdb(ligand, is_ligand=True)
+            self._default_settings() # FIXME: Just for coding this section
 
         @property
-        def kv_pdb(self):
+        def cavity(self):
             if self.output == None:
                 return None
             else:
@@ -784,8 +954,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
             else:
                 return self.output["output"]["log"]
 
-        def _add_pdb(self, pdb_fn: str, is_ligand: bool=False):
-            with open(pdb_fn) as f:
+        def _add_pdb(self, pdb: str, is_ligand: bool=False):
+            with open(pdb, "r") as f:
                 pdb = f.readlines()
             if is_ligand:
                 self.input["pdb_ligand"] = pdb
@@ -824,6 +994,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 "p3" : {"x" : -4.00, "y" : 4.00, "z" : -4.00},
                 "p4" : {"x" : -4.00, "y" : -4.00, "z" : 4.00},
             }
+
+        def save_job(self):
+            pass
 
 
 def KVFinderWebTools():
