@@ -873,7 +873,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # self.change_value.emit(jobs)
 
                 for job_id in jobs:
-                    print(job_id)
                     self._get_results(job_id)
 
                 print(jobs)
@@ -892,6 +891,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         
         def _get_results(self, job_id) -> Optional[Dict[str, Any]]:
+            pass
             # from PyQt5 import QtNetwork
             # from PyQt5.QtCore import QUrl
 
