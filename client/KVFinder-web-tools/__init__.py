@@ -88,6 +88,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
     def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
         from PyQt5.QtNetwork import QNetworkAccessManager
+        # entry point to PyMOL's API
+        from pymol import cmd
 
         # Define Default Parameters
         self._default = _Default()
@@ -125,17 +127,19 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # TODO: 
         # - function to check jobs id availables
         # - start checking jobs id status -> if failed: download and delete job id
+        # FIXME: REMOVE -> DEBUG
+        cmd.load('../examples/1FMO.pdb')
+        self.restore()
+        print(self.create_parameters())
 
 
     def initialize_gui(self) -> None:
         """
         Qt elements are located in self
         """
-        # entry point to PyMOL's API
-        from pymol import cmd
         # pymol.Qt provides the PyQt5 interface
         from pymol.Qt import QtWidgets
-        from pymol.Qt.utils import loadUi, getSaveFileNameWithExt
+        from pymol.Qt.utils import loadUi
 
         # populate the QMainWindow from our *.ui file
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
@@ -310,7 +314,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             # Draw Grid
             self.draw_grid(min_x, max_x, min_y, max_y, min_z, max_z)
         else:
-            QtWidgets.QMessageBox.critical(self, "Error", "Load a PDB file!")
+            QtWidgets.QMessageBox.critical(self, "Error", "Select an input PDB!")
             return
 
 
@@ -950,10 +954,166 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # TODO: Show server status as offline
 
 
+    def create_parameters(self) -> Dict[str, Any]:
+        # Create dict
+        parameters = dict()
+
+        # title
+        parameters['title'] = 'KVFinder-web job file'
+
+        # status
+        parameters['status'] = 'submitting'
+
+        # files
+        parameters['files'] = dict()
+        # pdb
+        if self.input.currentText() != '':
+            parameters['files']['pdb'] = os.path.join(self.output_dir_path.text(),self.input.currentText())
+        else:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error", "Select an input PDB!")
+            return
+        # ligand
+        if self.ligand_adjustment.isChecked():
+            if self.ligand.currentText() != '':
+                parameters['files']['pdb_ligand'] = os.path.join(self.output_dir_path.text(), self.ligand.currentText())
+            else:
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.critical(self, "Error", "Select an ligand PDB!")
+                return
+        # output
+        parameters['files']['output'] = self.output_dir_path.text()
+        # base_name
+        parameters['files']['base_name'] = self.base_name.text()
+
+        # modes
+        parameters['modes'] = dict()
+        # whole protein mode
+        parameters['modes']['whole_protein_mode'] = not self.box_adjustment.isChecked()
+        # box adjustment mode
+        parameters['modes']['box_mode'] = self.box_adjustment.isChecked()
+        # resolution_mode
+        parameters['modes']['resolution_mode'] = "Low"
+        # surface_mode
+        parameters['modes']['surface_mode'] = True
+        # kvp_mode
+        parameters['modes']['kvp_mode'] = False
+        # ligand_mode
+        parameters['modes']['ligand_mode'] = self.ligand_adjustment.isChecked()
+
+        # step_size
+        parameters['step_size'] = dict()
+        parameters['step_size']['step_size'] = 0.0
+
+        # probes
+        parameters['probes'] = dict()
+        # probe_in
+        parameters['probes']['probe_in'] = self.probe_in.value()
+        # probe_out
+        parameters['probes']['probe_out'] = self.probe_out.value()
+
+        # cutoffs
+        parameters['cutoffs'] = dict()
+        # volume_cutoff
+        parameters['cutoffs']['volume_cutoff'] = self.volume_cutoff.value()
+        # ligand_cutoff
+        parameters['cutoffs']['ligand_cutoff'] = self.ligand_cutoff.value()
+        # removal_distance
+        parameters['cutoffs']['removal_distance'] = self.removal_distance.value()
+
+        # visiblebox
+        box = self.create_box_parameters()
+        parameters['visiblebox'] = dict()
+        parameters['visiblebox'].update(box)
+
+        # internalbox
+        box = self.create_box_parameters(is_internal_box=True)
+        parameters['internalbox'] = dict()
+        parameters['internalbox'].update(box)
+
+        return parameters
+
+
+    def create_box_parameters(self, is_internal_box=False):
+        from math import pi, cos, sin
+
+        # Get box parameters
+        if self.box_adjustment.isChecked():
+            min_x = self.min_x_set.value()
+            max_x = self.max_x_set.value()
+            min_y = self.min_y_set.value()
+            max_y = self.max_y_set.value()
+            min_z = self.min_z_set.value()
+            max_z = self.max_z_set.value()
+            angle1 = self.angle1_set.value()
+            angle2 = self.angle2_set.value()
+        else:
+            min_x = 0.0
+            max_x = 0.0
+            min_y = 0.0
+            max_y = 0.0
+            min_z = 0.0
+            max_z = 0.0
+            angle1 = 0.0
+            angle2 = 0.0
+
+
+        # Add probe_out to internal box
+        if is_internal_box:
+            min_x += self.probe_out.value()
+            max_x += self.probe_out.value()
+            min_y += self.probe_out.value()
+            max_y += self.probe_out.value()
+            min_z += self.probe_out.value()
+            max_z += self.probe_out.value()
+            
+        # Convert angle # TODO: check if it is necessary
+        angle1 = (angle1 / 180.0) * pi
+        angle2 = (angle2 / 180.0) * pi
+
+        # Get positions of box vertices
+        # P1
+        x1 = -min_x * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + self.x
+
+        y1 = -min_y * cos(angle1) + (-min_z) * sin(angle1) + self.y
+        
+        z1 = min_x * sin(angle2) + min_y * sin(angle1) * cos(angle2) - min_z * cos(angle1) * cos(angle2) + self.z
+
+        # P2
+        x2 = max_x * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + self.x
+        
+        y2 = (-min_y) * cos(angle1) + (-min_z) * sin(angle1) + self.y
+        
+        z2 = (-max_x) * sin(angle2) - (-min_y) * sin(angle1) * cos(angle2) + (-min_z) * cos(angle1) * cos(angle2) + self.z
+
+        # P3
+        x3 = (-min_x) * cos(angle2) - max_y * sin(angle1) * sin(angle2) + (-min_z) * cos(angle1) * sin(angle2) + self.x
+
+        y3 = max_y * cos(angle1) + (-min_z) * sin(angle1) + self.y
+
+        z3 = -(-min_x) * sin(angle2) - max_y * sin(angle1) * cos(angle2) + (-min_z) * cos(angle1) * cos(angle2) + self.z
+
+        # P4
+        x4 = (-min_x) * cos(angle2) - (-min_y) * sin(angle1) * sin(angle2) + max_z * cos(angle1) * sin(angle2) + self.x
+        
+        y4 = (-min_y) * cos(angle1) + max_z * sin(angle1) + self.y
+        
+        z4 = -(-min_x) * sin(angle2) - (-min_y) * sin(angle1) * cos(angle2) + max_z * cos(angle1) * cos(angle2) + self.z
+
+        # Create points
+        p1 = {'x': x1, 'y': y1, 'z': z1}
+        p2 = {'x': x2, 'y': y2, 'z': z2}
+        p3 = {'x': x3, 'y': y3, 'z': z3}
+        p4 = {'x': x4, 'y': y4, 'z': z4}
+        box = {'p1': p1, 'p2': p2, 'p3': p3, 'p4': p4}
+
+        return box
+
+
     # TODO: Create Job class
     class Job(object):
     
-        def __init__(self, pdb: str, ligand: Optional[str]=None, id: int=None):
+        def __init__(self, pdb: Optional[str]=None, ligand: Optional[str]=None, id: Optional[int]=None, parameters: Optional[Dict[str, Any]]=None):
             super().__init__()
             self.id = id
             self.input: Optional[Dict[str, Any]] = {}
