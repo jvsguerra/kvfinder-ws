@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import os, sys, json, toml
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
 from typing import Optional, Any, Dict
 
 # DEBUG flag
@@ -867,17 +867,24 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         def run(self):
             import time
+            from PyQt5.QtCore import QTimer, QEventLoop
+            
+
             while True:
+                print("Checking job status ...")
+                
                 # Constantly checking available jobs
                 jobs = self._get_jobs()
+                print(jobs)
                 # self.change_value.emit(jobs)
 
                 for job_id in jobs:
-                    self._get_results(job_id)
-
-                print(jobs)
-                print("Checking job status ...")
-                time.sleep(4)
+                    self._get_results(job_id)            
+                
+                # time.sleep(4)
+                loop = QEventLoop()
+                QTimer.singleShot(3600, loop.quit)
+                loop.exec_()
 
 
         def _get_jobs(self) -> list:       
@@ -891,33 +898,33 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         
         def _get_results(self, job_id) -> Optional[Dict[str, Any]]:
-            pass
-            # from PyQt5 import QtNetwork
-            # from PyQt5.QtCore import QUrl
+            from PyQt5 import QtNetwork
+            from PyQt5.QtCore import QUrl, QTimer, QEventLoop
 
-            # print('Oi')
-            # try:
-            #     network_manager = QtNetwork.QNetworkAccessManager()
-            #     network_manager.finished.connect(self.handle_get_response)
+            try:
+                self.network_manager = QtNetwork.QNetworkAccessManager()
 
-            #     # Prepare request
-            #     url = QUrl(f'http://localhost:8081/{job_id}')
-            #     request = QtNetwork.QNetworkRequest(url)
+                # Prepare request
+                url = QUrl(f'http://localhost:8081/{job_id}')
+                request = QtNetwork.QNetworkRequest(url)
+                request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
 
-            #     # Get Request
-            #     network_manager.get(request)
-            # # reply.finished.connect(self.handle_get_response)
-            # except Exception as e:
-            #     print(e)
+                # Get Request
+                self.reply = self.network_manager.get(request)      
+                self.reply.finished.connect(self.handle_get_response) 
+            except Exception as e:
+                print(e)
         
-        def handle_get_response(self, reply) -> None:
+        
+        def handle_get_response(self) -> None:
             # Get QNetwork error status
-            er = reply.error()
+            er = self.reply.error()
             print(er)
+            print(self.reply.readAll())
             
             # Handle Get Response
-            reply = json.loads(str(self.reply.readAll(), 'utf-8'))
-            print(reply.keys())
+            # reply = json.loads(str(self.reply.readAll()))
+            # print(reply.keys())
 
 
     # TODO: Create Job class
