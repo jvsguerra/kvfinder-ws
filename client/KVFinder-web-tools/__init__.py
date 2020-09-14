@@ -6,11 +6,8 @@ from __future__ import print_function
 
 import os, sys, json, toml
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QThread
 from typing import Optional, Any, Dict
-
-# DEBUG flag
-DEBUG = True
 
 
 # global reference to avoid garbage collection of our dialog
@@ -130,7 +127,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # - start checking jobs id status -> if failed: download and delete job id
 
 
-    def initialize_gui(self):
+    def initialize_gui(self) -> None:
         """
         Qt elements are located in self
         """
@@ -205,7 +202,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Handle Post Response
         if er == QtNetwork.QNetworkReply.NoError:
-            print('Job submitted!')
+            print('Job submitted!') # TODO: QMessageBox
             reply = json.loads(str(reply.readAll(), 'utf-8'))
 
             # Results not available
@@ -235,16 +232,16 @@ class PyMOLKVFinderWebTools(QMainWindow):
                     f.write("base_name = \"output\"\n")
                     f.write('\n')
                     toml.dump(o=self.job.input['settings'], f=f)
-            # Job already sent and results are available
+            # Job already sent to KVFinder-web server
             else:
                 status = reply["status"]
                 
                 # handle job completed
                 if status == 'completed':
-                    print('Job already submitted and completed!')
+                    print('Job already submitted and completed!') # TODO: QMessageBox
                 # handle job not completed
                 else:
-                    print('Job currently running')               
+                    print('Job currently running') # TODO: QMessageBox               
         
         else:
             print("Error ocurred: ", er)
@@ -261,24 +258,23 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return jobs
 
 
-    def _check_job_status(self):
-        # TODO: function to run in the background to check status of jobs
+    def _check_job_status(self) -> bool:
         self.thread = self.Background()
         self.thread.start()
-        pass
+        return True
 
 
-    def _get_results(self):
+    def _get_results(self) -> Optional[Dict[str, Any]]:
         # TODO: function to get and prepare results from server
         pass
 
 
-    def _show_results(self):
+    def _show_results(self) -> None:
         # TODO: show results into PyMOL viewer and GUI
         pass
 
 
-    def show_grid(self):
+    def show_grid(self) -> None:
         """
         Callback for the "Show Grid" button
         - Get minimum and maximum coordinates of the KVFinder-web 3D-grid, dependent on selected parameters.
@@ -318,7 +314,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             return
 
 
-    def draw_grid(self, min_x, max_x, min_y, max_y, min_z, max_z):
+    def draw_grid(self, min_x, max_x, min_y, max_y, min_z, max_z) -> None:
         """
         Draw Grid in PyMOL.
         :param min_x: minimum X coordinate.
@@ -447,7 +443,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cmd.delete("vertices")
 
 
-    def restore(self):
+    def restore(self) -> None:
         """
         Callback for the "Restore Default Values" button
         """
@@ -480,7 +476,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.ligand_cutoff.setValue(self._default.ligand_cutoff)
 
     
-    def refresh(self, combo_box):
+    def refresh(self, combo_box) -> None:
         """
         Callback for the "Refresh" button
         """
@@ -500,7 +496,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return
 
 
-    def select_directory(self):
+    def select_directory(self) -> None:
         """ 
         Callback for the "Browse ..." button
         Open a QFileDialog to select a directory.
@@ -518,7 +514,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return
 
 
-    def set_box(self):
+    def set_box(self) -> None:
         """
         Create box coordinates, enable 'Delete Box' and 'Redraw Box' buttons and call draw_box function.
         :param padding: box padding value.
@@ -576,7 +572,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.angle2.setEnabled(True)
 
 
-    def draw_box(self):
+    def draw_box(self) -> None:
         """
             Draw box in PyMOL interface.
             :return: box object.
@@ -704,7 +700,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cmd.delete("vertices")
         
 
-    def delete_box(self):
+    def delete_box(self) -> None:
         """
         Delete box object, disable 'Delete Box' and 'Redraw Box' buttons and enable 'Draw Box' button.
         """
@@ -751,7 +747,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.angle2.setEnabled(False)
 
 
-    def redraw_box(self):
+    def redraw_box(self) -> None:
         """
         Redraw box in PyMOL interface.
         :param padding: box padding.
@@ -841,7 +837,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.draw_box()
 
 
-    def box_adjustment_help(self):
+    def box_adjustment_help(self) -> None:
         from pymol.Qt import QtWidgets, QtCore
         text = QtCore.QCoreApplication.translate("KVFinderWeb", u"<html><head/><body><p align=\"justify\"><span style=\" font-weight:600; text-decoration: underline;\">Box Adjustment mode:</span></p><p align=\"justify\">- Create a selection (optional);</p><p align=\"justify\">- Define a <span style=\" font-weight:600;\">Padding</span> (optional);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Draw Box</span> button.</p><p align=\"justify\"><br/><span style=\"text-decoration: underline;\">Customize your <span style=\" font-weight:600;\">box</span></span>:</p><p align=\"justify\">- Change one item at a time (e.g. <span style=\" font-style:italic;\">Padding</span>, <span style=\" font-style:italic;\">Minimum X</span>, <span style=\" font-style:italic;\">Maximum X</span>, ...);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Redraw Box</span> button.<br/></p><p><span style=\" font-weight:400; text-decoration: underline;\">Delete </span><span style=\" text-decoration: underline;\">box</span><span style=\" font-weight:400; text-decoration: underline;\">:</span></p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Delete Box</span> button.<br/></p><p align=\"justify\"><span style=\"text-decoration: underline;\">Colors of the <span style=\" font-weight:600;\">box</span> object:</span></p><p align=\"justify\">- <span style=\" font-weight:600;\">Red</span> corresponds to <span style=\" font-weight:600;\">X</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Green</span> corresponds to <span style=\" font-weight:600;\">Y</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Blue</span> corresponds to <span style=\" font-weight:600;\">Z</span> axis.</p></body></html>", None)
         help_information = QtWidgets.QMessageBox(self)
@@ -851,7 +847,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         help_information.exec_()
 
     
-    def closeEvent(self, event):
+    def closeEvent(self, event) -> None:
         """
         Add one step to closeEvent from QMainWindow
         """
@@ -861,15 +857,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     class Background(QThread):
 
-        from PyQt5.QtNetwork import QNetworkAccessManager
         # change_value = pyqtSignal(list)
         # jobs = list()        
 
-        def run(self):
-            import time
+        def run(self) -> None:
             from PyQt5.QtCore import QTimer, QEventLoop
             
-
             while True:
                 print("Checking job status ...")
                 
@@ -878,12 +871,28 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 print(jobs)
                 # self.change_value.emit(jobs)
 
+                # Check all job ids
                 for job_id in jobs:
-                    self._get_results(job_id)            
+
+                    # Get job status
+                    job_toml = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
+                    with open(job_toml) as f:
+                        job_info = toml.load(f)
+                    status = job_info['status']
+                    print(status)
+
+                    # Handle job status
+                    if status == 'queued' or status == 'running':
+                        self._get_results(job_id)
+                    elif status == 'completed':
+                        # TODO: check output files, if exist ignore, else create again
+                        pass
+
+                    # with open('output.toml', 'w') as f:
+                    #     toml.dump(job_info, f)         
                 
-                # time.sleep(4)
                 loop = QEventLoop()
-                QTimer.singleShot(3600, loop.quit)
+                QTimer.singleShot(10000, loop.quit)
                 loop.exec_()
 
 
@@ -897,12 +906,13 @@ class PyMOLKVFinderWebTools(QMainWindow):
             return jobs
 
         
-        def _get_results(self, job_id) -> Optional[Dict[str, Any]]:
+        def _get_results(self, job_id) -> None:
             from PyQt5 import QtNetwork
             from PyQt5.QtCore import QUrl, QTimer, QEventLoop
 
             try:
                 self.network_manager = QtNetwork.QNetworkAccessManager()
+                self.network_manager.finished.connect(self.handle_get_response)
 
                 # Prepare request
                 url = QUrl(f'http://localhost:8081/{job_id}')
@@ -911,20 +921,33 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
                 # Get Request
                 self.reply = self.network_manager.get(request)      
-                self.reply.finished.connect(self.handle_get_response) 
+                # self.reply.finished.connect(self.handle_get_response) 
             except Exception as e:
                 print(e)
         
         
-        def handle_get_response(self) -> None:
-            # Get QNetwork error status
-            er = self.reply.error()
-            print(er)
-            print(self.reply.readAll())
+        def handle_get_response(self, reply) -> None:
+            from PyQt5 import QtNetwork
             
-            # Handle Get Response
-            # reply = json.loads(str(self.reply.readAll()))
-            # print(reply.keys())
+            # Get QNetwork error status
+            error = reply.error()
+            print(error)
+
+            if error == QtNetwork.QNetworkReply.NoError:
+
+                # Read data retrived from server
+                reply = json.loads(str(reply.readAll(), 'utf-8'))
+
+                print(reply.keys())
+
+            elif error == QtNetwork.QNetworkReply.ContentNotFoundError: 
+                print("Job not available anymore")
+                # TODO: QMessageBox informing that job is not available anymore.
+                # Jobs are kept for x days after completion
+
+            elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
+                print("KVFinder-web server is Offline!\n")
+                # TODO: Show server status as offline
 
 
     # TODO: Create Job class
@@ -961,7 +984,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             else:
                 return self.output["output"]["log"]
 
-        def _add_pdb(self, pdb: str, is_ligand: bool=False):
+        def _add_pdb(self, pdb: str, is_ligand: bool=False) -> None:
             with open(pdb, "r") as f:
                 pdb = f.readlines()
             if is_ligand:
@@ -969,7 +992,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             else:
                 self.input["pdb"] = pdb
 
-        def _default_settings(self):
+        def _default_settings(self) -> None:
             self.input["settings"] = {}
             self.input["settings"]["modes"] = {
                 "whole_protein_mode" : True,
@@ -1002,11 +1025,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 "p4" : {"x" : -4.00, "y" : -4.00, "z" : 4.00},
             }
 
-        def save_job(self):
+        def save_job(self) -> None:
             pass
 
 
-def KVFinderWebTools():
+def KVFinderWebTools() -> None:
     """ Debug KVFinderWebTools """
     # TODO: transform it in a new tools without PyMOL later
     from PyQt5.QtWidgets import QApplication
