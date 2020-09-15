@@ -9,6 +9,8 @@ pymol2-demo-plugin/
 !KVFinder-web-tools/__init__.py
 !KVFinder-web-tools/KVFinder-web.ui
 !KVFinder-web-tools/LICENSE
+!KVFinder-web-tools/README.md
+KVFinder-web-tools/
 
 # python3-pip modules
 !requirements.txt
