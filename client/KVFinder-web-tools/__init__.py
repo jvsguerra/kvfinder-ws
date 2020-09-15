@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import os, sys, json, toml
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal
 from typing import Optional, Any, Dict
 
 
@@ -108,7 +108,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Define server
         self.server = f"{server}:{port}"
         self.network_manager = QNetworkAccessManager()
-        self.network_manager.finished.connect(self.handle_post_response)
+        self.network_manager.finished.connect(self._handle_post_response)
 
         # Create ./KVFinder-web directory for jobs
         jobs_dir = os.path.join(os.path.expanduser('~'), '.KVFinder-web')
@@ -130,11 +130,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # FIXME: REMOVE -> DEBUG
         cmd.load('../examples/1FMO.pdb')
         self.restore()
-        parameters = self.create_parameters()
-        import pickle
-        with open('templates/parameters.pkl', 'wb') as f:
-            pickle.dump(parameters, f, pickle.HIGHEST_PROTOCOL)
-
 
 
     def initialize_gui(self) -> None:
@@ -181,7 +176,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Create job
         parameters = self.create_parameters()
-        self.job = self.Job(parameters)
+        self.job = Job(parameters)
         
         # Post request
         try:
@@ -198,13 +193,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
         except Exception as e:
             print(e)
 
-        # TODO: 
-        # - integrate client.py 
-        # - check in ./KVFinder-web for the id
-        # - if complete load results
 
-
-    def handle_post_response(self, reply) -> None:
+    def _handle_post_response(self, reply) -> None:
         from PyQt5 import QtNetwork
         # Get QNetworkReply error status
         er = reply.error()
@@ -250,7 +240,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
 
     def _check_job_status(self) -> bool:
-        self.thread = self.Background()
+        self.thread = Background()
         self.thread.start()
         return True
 
@@ -838,109 +828,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         help_information.exec_()
 
     
-    def closeEvent(self, event) -> None:
-        """
-        Add one step to closeEvent from QMainWindow
-        """
-        global dialog
-        dialog = None
-
-
-    class Background(QThread):
-
-        # change_value = pyqtSignal(list)
-        # jobs = list()        
-
-        def run(self) -> None:
-            from PyQt5.QtCore import QTimer, QEventLoop
-            
-            while True:
-                print("Checking job status ...")
-                
-                # Constantly checking available jobs
-                jobs = self._get_jobs()
-                print(jobs)
-                # self.change_value.emit(jobs)
-
-                # Check all job ids
-                for job_id in jobs:
-
-                    # Get job status
-                    job_toml = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
-                    with open(job_toml) as f:
-                        job_info = toml.load(f)
-                    status = job_info['status']
-                    print(status)
-
-                    # Handle job status
-                    if status == 'queued' or status == 'running':
-                        self._get_results(job_id)
-                    elif status == 'completed':
-                        # TODO: check output files, if exist ignore, else create again
-                        pass
-
-                    # with open('output.toml', 'w') as f:
-                    #     toml.dump(job_info, f)         
-                
-                loop = QEventLoop()
-                QTimer.singleShot(10000, loop.quit)
-                loop.exec_()
-
-
-        def _get_jobs(self) -> list:       
-            # Get job dir
-            d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
-            
-            # Get jobs availables in dir
-            jobs = os.listdir(d)
-
-            return jobs
-
-        
-        def _get_results(self, job_id) -> None:
-            from PyQt5 import QtNetwork
-            from PyQt5.QtCore import QUrl, QTimer, QEventLoop
-
-            try:
-                self.network_manager = QtNetwork.QNetworkAccessManager()
-                self.network_manager.finished.connect(self.handle_get_response)
-
-                # Prepare request
-                url = QUrl(f'http://localhost:8081/{job_id}')
-                request = QtNetwork.QNetworkRequest(url)
-                request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
-
-                # Get Request
-                self.reply = self.network_manager.get(request)      
-                # self.reply.finished.connect(self.handle_get_response) 
-            except Exception as e:
-                print(e)
-        
-        
-        def handle_get_response(self, reply) -> None:
-            from PyQt5 import QtNetwork
-            
-            # Get QNetwork error status
-            error = reply.error()
-            print(error)
-
-            if error == QtNetwork.QNetworkReply.NoError:
-
-                # Read data retrived from server
-                reply = json.loads(str(reply.readAll(), 'utf-8'))
-
-                print(reply.keys())
-
-            elif error == QtNetwork.QNetworkReply.ContentNotFoundError: 
-                print("Job not available anymore")
-                # TODO: QMessageBox informing that job is not available anymore.
-                # Jobs are kept for x days after completion
-
-            elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
-                print("KVFinder-web server is Offline!\n")
-                # TODO: Show server status as offline
-
-
     def create_parameters(self) -> Dict[str, Any]:
         # Create dict
         parameters = dict()
@@ -1099,142 +986,324 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return box
 
 
-    class Job(object):
+    def closeEvent(self, event) -> None:
+        """
+        Add one step to closeEvent from QMainWindow
+        """
+        global dialog
+        dialog = None
+
+    # @pyqtSlot(int)
+    def msg_results_not_available(self, job_id) -> None:
+        from PyQt5.QtWidgets import QMessageBox
+
+        message = QMessageBox(self)
+        message.setWindowTitle(f"Job: {job_id}")
+        message.setText(f'The requested job with id {job_id} is not available anymore in KVFinder-web server!')
+        message.setDetailedText('Jobs are kept for one week days after completion.')
+        message.setStyleSheet("QLabel{min-width:500 px;}")
+        message.exec_()
+        return
 
 
-        def __init__(self, parameters: Optional[Dict[str, Any]]):
-            # Job Information (local)
-            self.status: Optional[str] = None
-            self.pdb: Optional[str] = None
-            self.ligand: Optional[str] = None
-            self.output_directory: Optional[str] = None
-            self.base_name: Optional[str] = None
-            self.id_added_manually: Optional[bool] = False
-            # Request information (server)
-            self.input: Optional[Dict[str, Any]] = {} 
-            self.output: Optional[Dict[str, Any]] = None
-            # Upload parameters in self.input
-            self.upload(parameters)
+class Job(object):
 
 
-        @property
-        def cavity(self):
-            if self.output == None:
-                return None
-            else:
-                return self.output["output"]["pdb_kv"]
+    def __init__(self, parameters: Optional[Dict[str, Any]]):
+        # Job Information (local)
+        self.status: Optional[str] = None
+        self.pdb: Optional[str] = None
+        self.ligand: Optional[str] = None
+        self.output_directory: Optional[str] = None
+        self.base_name: Optional[str] = None
+        self.id_added_manually: Optional[bool] = False
+        # Request information (server)
+        self.id: Optional[int] = None
+        self.input: Optional[Dict[str, Any]] = {} 
+        self.output: Optional[Dict[str, Any]] = None
+        # Upload parameters in self.input
+        self.upload(parameters)
 
 
-        @property
-        def report(self):
-            if self.output == None: 
-                return None
-            else:
-                return self.output["output"]["report"]
+    @property
+    def cavity(self):
+        if self.output == None:
+            return None
+        else:
+            return self.output["output"]["pdb_kv"]
 
 
-        @property
-        def log(self):
-            if self.output == None:
-                return None
-            else:
-                return self.output["output"]["log"]
+    @property
+    def report(self):
+        if self.output == None: 
+            return None
+        else:
+            return self.output["output"]["report"]
 
 
-        def _add_pdb(self, pdb_fn: str, is_ligand: bool=False):
-            with open(pdb_fn) as f:
-                pdb = f.readlines()
-            if is_ligand:
-                self.input["pdb_ligand"] = pdb
-            else:
-                self.input["pdb"] = pdb
+    @property
+    def log(self):
+        if self.output == None:
+            return None
+        else:
+            return self.output["output"]["log"]
 
 
-        def upload(self, parameters: Optional[Dict[str, Any]]):
-            from pymol import cmd
-            """ Load Job from paramters Dict """
-            # Job Information (local)
-            # Status
-            self.status = parameters['status']
-            # ID Added Manually
-            if 'id_added_manually' in parameters.keys():
-                # if parameters['id_added_manually']:
-                self.id_added_manually = parameters['id_added_manually']
-            # Output directory
-            self.output_directory = parameters['files']['output']
-            # Base_name
-            self.base_name = parameters['files']['base_name']
-            # Input PDB
-            self.pdb = os.path.join(self.output_directory, parameters['files']['pdb'] + '.pdb')
-            cmd.save(self.pdb, parameters['files']['pdb'], 0,  'pdb')
-            # Ligand PDB
-            if 'ligand' in parameters['files'].keys():
-                self.ligand = os.path.join(self.output_directory, parameters['files']['ligand'] + '.pdb')
-                cmd.save(self.ligand, parameters['files']['ligand'], 0, "pdb")
+    def _add_pdb(self, pdb_fn: str, is_ligand: bool=False):
+        with open(pdb_fn) as f:
+            pdb = f.readlines()
+        if is_ligand:
+            self.input["pdb_ligand"] = pdb
+        else:
+            self.input["pdb"] = pdb
 
-            # Request information (server)
-            # Input PDB
-            self._add_pdb(self.pdb)
-            # Ligand PDB
+
+    def upload(self, parameters: Optional[Dict[str, Any]]):
+        from pymol import cmd
+        """ Load Job from paramters Dict """
+        # Job Information (local)
+        # Status
+        self.status = parameters['status']
+        # ID Added Manually
+        if 'id_added_manually' in parameters.keys():
+            # if parameters['id_added_manually']:
+            self.id_added_manually = parameters['id_added_manually']
+        # Output directory
+        self.output_directory = parameters['files']['output']
+        # Base_name
+        self.base_name = parameters['files']['base_name']
+        # Input PDB
+        self.pdb = os.path.join(self.output_directory, parameters['files']['pdb'] + '.pdb')
+        cmd.save(self.pdb, parameters['files']['pdb'], 0,  'pdb')
+        # Ligand PDB
+        if 'ligand' in parameters['files'].keys():
+            self.ligand = os.path.join(self.output_directory, parameters['files']['ligand'] + '.pdb')
+            cmd.save(self.ligand, parameters['files']['ligand'], 0, "pdb")
+
+        # Request information (server)
+        # Input PDB
+        self._add_pdb(self.pdb)
+        # Ligand PDB
+        if self.ligand is not None:
+            self._add_pdb(self.ligand, is_ligand=True)
+        # Settings
+        self.input['settings'] = dict()
+        # Modes
+        self.input['settings']['modes'] = parameters['modes']
+        # Step size
+        self.input['settings']['step_size'] = parameters['step_size']
+        # Probes
+        self.input['settings']['probes'] = parameters['probes']
+        # Cutoffs
+        self.input['settings']['cutoffs'] = parameters['cutoffs']
+        # Visible box
+        self.input['settings']['visiblebox'] = parameters['visiblebox']
+        # Internal box
+        self.input['settings']['internalbox'] = parameters['internalbox']
+
+
+    def save(self, id: int):
+        """ Save Job to job.toml """
+        # Create job directory in ~/.KVFinder-web/
+        job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', str(id))
+        try:
+            os.mkdir(job_dn)
+        except FileExistsError:
+            pass
+
+        # Create job file inside ~/.KVFinder-web/id
+        job_fn = os.path.join(job_dn, 'job.toml')
+        with open(job_fn, 'w') as f:
+            f.write("# TOML configuration file for KVFinder-web job\n\n")
+            f.write("title = \"KVFinder-web job file\"\n\n")
+            f.write(f"status = \"{self.status}\"\n\n")
+            if self.id_added_manually:
+                f.write(f"id_added_manually = \"{self.id_added_manually}\"\n\n")
+            f.write(f"[files]\n")
+            f.write(f"pdb = \"{self.pdb}\"\n")
             if self.ligand is not None:
-                self._add_pdb(self.ligand, is_ligand=True)
-            # Settings
-            self.input['settings'] = dict()
-            # Modes
-            self.input['settings']['modes'] = parameters['modes']
-            # Step size
-            self.input['settings']['step_size'] = parameters['step_size']
-            # Probes
-            self.input['settings']['probes'] = parameters['probes']
-            # Cutoffs
-            self.input['settings']['cutoffs'] = parameters['cutoffs']
-            # Visible box
-            self.input['settings']['visiblebox'] = parameters['visiblebox']
-            # Internal box
-            self.input['settings']['internalbox'] = parameters['internalbox']
+                f.write(f"ligand = \"{self.ligand}\"\n")
+            f.write(f"output = \"{self.output_directory}\"\n")
+            f.write(f"base_name = \"{self.base_name}\"\n")
+            f.write('\n')
+            toml.dump(o=self.input['settings'], f=f)
+            f.write('\n')
 
 
-        def save(self, id: int):
-            """ Save Job to job.toml """
-            # Create job directory in ~/.KVFinder-web/
-            job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', str(id))
-            try:
-                os.mkdir(job_dn)
-            except FileExistsError:
-                pass
+    @classmethod
+    def load(cls, fn: Optional[str]):
+        """ Load Job from job.toml """
+        # Read job file
+        with open(fn, 'r') as f:
+            job_info = toml.load(f=f)
+        
+        # Fix pdb and ligand in job_info
+        job_info['files']['pdb'] = os.path.basename(job_info['files']['pdb']).replace('.pdb', '')
+        if 'ligand' in job_info['files'].keys():
+            job_info['files']['ligand'] = os.path.basename(job_info['files']['ligand']).replace('.pdb', '')
 
-            # Create job file inside ~/.KVFinder-web/id
-            job_fn = os.path.join(job_dn, 'job.toml')
-            with open(job_fn, 'w') as f:
-                f.write("# TOML configuration file for KVFinder-web job\n\n")
-                f.write("title = \"KVFinder-web job file\"\n\n")
-                f.write(f"status = \"{self.status}\"\n\n")
-                if self.id_added_manually:
-                    f.write(f"id_added_manually = \"{self.id_added_manually}\"\n\n")
-                f.write(f"[files]\n")
-                f.write(f"pdb = \"{self.pdb}\"\n")
-                if self.ligand is not None:
-                    f.write(f"ligand = \"{self.ligand}\"\n")
-                f.write(f"output = \"{self.output_directory}\"\n")
-                f.write(f"base_name = \"{self.base_name}\"\n")
-                f.write('\n')
-                toml.dump(o=self.input['settings'], f=f)
-                f.write('\n')
+        return cls(job_info)
+
+    
+    def export(self):
+        # Prepare base file
+        base_dir = os.path.join(self.output_directory, self.base_name)
+
+        try:
+            os.mkdir(base_dir)
+        except:
+            pass
+        
+        # Export log
+        log = os.path.join(base_dir, 'KVFinder.log')
+        with open(log, 'w') as f:
+            f.write(self.log)
+
+        # Export report
+        report = os.path.join(base_dir, f'{self.base_name}.KVFinder.results.toml')
+        with open(report, 'w') as f:
+            f.write(self.report)
+
+        # Export cavity
+        cavity = os.path.join(base_dir, f'{self.base_name}.KVFinder.output.pdb')
+        with open(cavity, 'w') as f:
+            f.write(self.cavity)
 
 
-        @classmethod
-        def load(cls, fn: Optional[str]):
-            """ Load Job from job.toml """
-            # Read job file
-            with open(fn, 'r') as f:
-                job_info = toml.load(f=f)
+class Background(QThread):
+
+    # id = pyqtSignal(int)
+    # change_value = pyqtSignal(list)
+    # jobs = list()        
+
+    def run(self) -> None:
+        from PyQt5.QtCore import QTimer, QEventLoop
+        
+        while True:
+            print("\n\nChecking job status ...")
             
-            # Fix pdb and ligand in job_info
-            job_info['files']['pdb'] = os.path.basename(job_info['files']['pdb']).replace('.pdb', '')
-            if 'ligand' in job_info['files'].keys():
-                job_info['files']['ligand'] = os.path.basename(job_info['files']['ligand']).replace('.pdb', '')
+            # Constantly getting available jobs
+            jobs = self._get_jobs()
+            print(jobs)
+            # self.change_value.emit(jobs)
 
-            return cls(job_info)
+            # Check all job ids
+            for job_id in jobs:
+
+                # Get job information 
+                job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
+                self.job_info = Job.load(fn=job_fn)
+                self.job_info.id = int(job_id)
+
+                # Save current status
+                status = self.job_info.status
+
+                # Handle job status
+                if status == 'queued' or status == 'running':
+                    # Get request for job results
+                    self._get_results(job_id)
+
+                    # Check change in status to save job file
+                    if status != self.job_info.status:
+                        self.job_info.save(job_id)
+
+                elif status == 'completed':
+                    # Check if results files exist
+                    output_exists = self._check_output_exists()
+
+                    if not output_exists:
+                        self._get_results(job_id)
+
+                # self.job_info = None
+            
+            loop = QEventLoop()
+            QTimer.singleShot(10000, loop.quit)
+            loop.exec_()
+
+
+    def _check_output_exists(self):
+        # Prepare base file
+        base_dir = os.path.join(self.job_info.output_directory, self.job_info.base_name)
+        
+        # Get output files paths
+        log = os.path.join(base_dir, 'KVFinder.log')
+        report = os.path.join(base_dir, f'{self.base_name}.KVFinder.results.toml')
+        cavity = os.path.join(base_dir, f'{self.base_name}.KVFinder.output.pdb')
+
+        # Check if files exist
+        log_exist = os.path.exists(log)
+        report_exist = os.path.exists(report)
+        cavity_exist = os.path.exists(cavity)
+
+        return log_exist and report_exist and cavity_exist
+
+
+    def _get_jobs(self) -> list:       
+        # Get job dir
+        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
+        
+        # Get jobs availables in dir
+        jobs = os.listdir(d)
+
+        return jobs
+
+    
+    def _get_results(self, job_id) -> None:
+        from PyQt5 import QtNetwork
+        from PyQt5.QtCore import QUrl, QTimer, QEventLoop
+
+        try:
+            self.network_manager = QtNetwork.QNetworkAccessManager()
+            # self.network_manager.finished.connect(self._handle_get_response)
+
+            # Prepare request
+            url = QUrl(f'http://localhost:8081/{job_id}')
+            request = QtNetwork.QNetworkRequest(url)
+            request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
+
+            # Get Request
+            self.reply = self.network_manager.get(request)
+            self.reply.finished.connect(self._handle_get_response)
+        except Exception as e:
+            print(e)
+    
+    
+    def _handle_get_response(self) -> None:
+        from PyQt5 import QtNetwork
+        
+        # Get QNetwork error status
+        error = self.reply.error()
+        # print(error)
+
+        if error == QtNetwork.QNetworkReply.NoError:
+
+            # Read data retrived from server
+            reply = json.loads(str(self.reply.readAll(), 'utf-8'))
+            
+            # Pass outputs to Job class
+            # print(reply)
+            self.job_info.output = reply
+
+            # Export results
+            self.job_info.export()
+
+        elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
+            from PyQt5.QtCore import QMetaObject, Q_ARG, Qt
+
+            print("Job not available anymore")
+            # self.id.emit(self.job_info.id)
+            
+            # QMetaObject.invokeMethod(
+            #     'msg_results_not_available',
+            #     Qt.QueuedConnection,
+            #     Q_ARG(int, self.job_info.id)
+            # )
+            # TODO: QMessageBox informing that job is not available anymore.
+            # Jobs are kept for x days after completion
+
+        elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
+            print("KVFinder-web server is Offline!\n")
+            # TODO: Show server status as offline
 
 
 def KVFinderWebTools() -> None:
