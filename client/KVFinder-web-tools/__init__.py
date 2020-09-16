@@ -255,8 +255,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.thread = Background()
         self.thread.start()
         
-        # Communication GUI-Background
+        # Communication between GUI and Background threads
         self.thread.id_signal.connect(self.msg_results_not_available)
+        self.thread.server_down.connect(self.server_down)
+        self.thread.server_up.connect(self.server_up)
         self.msgbox_confirmed.connect(self.thread.wait_status)
         
         return True
@@ -1215,7 +1217,9 @@ class Background(QThread):
 
     # Signals
     id_signal = pyqtSignal(str)
-    wait = False      
+    wait = False
+    server_down = pyqtSignal()
+    server_up = pyqtSignal()      
 
 
     def run(self) -> None:
@@ -1332,10 +1336,16 @@ class Background(QThread):
             # Export results
             self.job_info.export()
 
+            # Send Server Up Signal to GUI Thread
+            self.server_up.emit()  
+
         elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
-            self.wait = True
+            # Send Server Up Signal to GUI Thread
+            self.server_up.emit()  
+            
             # Send Job Id to GUI Thread
-            self.id_signal.emit(self.job_info.id)      
+            self.wait = True
+            self.id_signal.emit(self.job_info.id)
 
             # Remove job id from .KVFinder-web
             job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.job_info.id)
@@ -1346,6 +1356,9 @@ class Background(QThread):
 
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
             print("KVFinder-web server is Offline!\n")
+            
+            # Send Server Down Signal to GUI Thread 
+            self.server_down.emit()
             # TODO: Show server status as offline
 
 
