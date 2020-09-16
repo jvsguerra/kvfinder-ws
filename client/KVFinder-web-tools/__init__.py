@@ -122,7 +122,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self._check_job_status()
 
         # Get available jobs
-        self.available_jobs = self._get_available_jobs()
+        for available_job in self._get_available_jobs():
+            self.available_jobs.addItem(available_job)
 
         # print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
@@ -144,6 +145,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # populate the QMainWindow from our *.ui file
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
         loadUi(uifile, self)
+
+        # ScrollBars binded to QListWidgets in Descriptors
+        scroll_bar_volume = QtWidgets.QScrollBar(self)
+        self.volume_list.setVerticalScrollBar(scroll_bar_volume)
+        scroll_bar_area = QtWidgets.QScrollBar(self)
+        self.area_list.setVerticalScrollBar(scroll_bar_area)
+        scroll_bar_residues = QtWidgets.QScrollBar(self)
+        self.residues_list.setVerticalScrollBar(scroll_bar_residues)
 
         ########################
         ### Buttons Callback ###
