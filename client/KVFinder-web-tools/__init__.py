@@ -122,8 +122,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self._check_job_status()
 
         # Get available jobs
-        for available_job in self._get_available_jobs():
-            self.available_jobs.addItem(available_job)
+        self.available_jobs.addItems(self._get_available_jobs())
+
+        # Get KVFinder-web server status
+        self._check_server_status()
 
         # print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
@@ -258,6 +260,30 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.msgbox_confirmed.connect(self.thread.wait_status)
         
         return True
+
+
+    def _check_server_status(self):
+        # TODO: check a better way to do this
+        import urllib.request
+        try:
+            urllib.request.urlopen(self.server, timeout=1).getcode()
+            self.server_up()
+        except:
+            self.server_down()
+
+
+    @pyqtSlot()
+    def server_up(self):
+        self.server_status.clear()
+        self.server_status.setText('Online')
+        self.server_status.setStyleSheet('color: green;')
+    
+
+    @pyqtSlot()
+    def server_down(self):
+        self.server_status.clear()
+        self.server_status.setText('Offline')
+        self.server_status.setStyleSheet('color: red;') 
 
 
     def _get_results(self) -> Optional[Dict[str, Any]]:
