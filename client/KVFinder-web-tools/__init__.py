@@ -80,11 +80,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
     - creates Graphical User Interface in PyQt5 in PyMOL viewer
     - defines and connects callbacks for Qt elements
     TODO:
-    - Run process in the background to check job status
-    - Run process to clean job ids from ./KVFinder-web in the background
-    - Prepare Run function
     - Prepare Results window
     """
+
+    # Signals
+    msgbox_confirmed = pyqtSignal(bool)
+
     def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
         from PyQt5.QtNetwork import QNetworkAccessManager
@@ -242,6 +243,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
     def _check_job_status(self) -> bool:
         self.thread = Background()
         self.thread.start()
+        
+        # Communication GUI-Background
+        self.thread.id_signal.connect(self.msg_results_not_available)
+        self.msgbox_confirmed.connect(self.thread.wait_status)
+        
         return True
 
 
@@ -993,17 +999,17 @@ class PyMOLKVFinderWebTools(QMainWindow):
         global dialog
         dialog = None
 
-    # @pyqtSlot(int)
+
+    @pyqtSlot(str)
     def msg_results_not_available(self, job_id) -> None:
         from PyQt5.QtWidgets import QMessageBox
 
         message = QMessageBox(self)
-        message.setWindowTitle(f"Job: {job_id}")
-        message.setText(f'The requested job with id {job_id} is not available anymore in KVFinder-web server!')
-        message.setDetailedText('Jobs are kept for one week days after completion.')
-        message.setStyleSheet("QLabel{min-width:500 px;}")
-        message.exec_()
-        return
+        message.setWindowTitle(f"Job Notification")
+        message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
+        message.setInformativeText('Jobs are kept for one week days after completion.')
+        if message.exec_() == QMessageBox.Ok:
+            self.msgbox_confirmed.emit(False)
 
 
 class Job(object):
@@ -1018,7 +1024,7 @@ class Job(object):
         self.base_name: Optional[str] = None
         self.id_added_manually: Optional[bool] = False
         # Request information (server)
-        self.id: Optional[int] = None
+        self.id: Optional[str] = None
         self.input: Optional[Dict[str, Any]] = {} 
         self.output: Optional[Dict[str, Any]] = None
         # Upload parameters in self.input
@@ -1172,20 +1178,27 @@ class Job(object):
 
 class Background(QThread):
 
-    # id = pyqtSignal(int)
-    # change_value = pyqtSignal(list)
-    # jobs = list()        
+    # Signals
+    id_signal = pyqtSignal(str)
+    wait = False      
+
 
     def run(self) -> None:
         from PyQt5.QtCore import QTimer, QEventLoop
         
         while True:
+            
+            # Wait QMessageBox signal from GUI thread that deletes unavailable jobs
+            while self.wait:
+                loop = QEventLoop()
+                QTimer.singleShot(1000, loop.quit)
+                loop.exec_()
+            
             print("\n\nChecking job status ...")
             
             # Constantly getting available jobs
             jobs = self._get_jobs()
             print(jobs)
-            # self.change_value.emit(jobs)
 
             # Check all job ids
             for job_id in jobs:
@@ -1193,7 +1206,7 @@ class Background(QThread):
                 # Get job information 
                 job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
                 self.job_info = Job.load(fn=job_fn)
-                self.job_info.id = int(job_id)
+                self.job_info.id = job_id
 
                 # Save current status
                 status = self.job_info.status
@@ -1213,8 +1226,6 @@ class Background(QThread):
 
                     if not output_exists:
                         self._get_results(job_id)
-
-                # self.job_info = None
             
             loop = QEventLoop()
             QTimer.singleShot(10000, loop.quit)
@@ -1267,7 +1278,7 @@ class Background(QThread):
         except Exception as e:
             print(e)
     
-    
+
     def _handle_get_response(self) -> None:
         from PyQt5 import QtNetwork
         
@@ -1281,29 +1292,42 @@ class Background(QThread):
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
             
             # Pass outputs to Job class
-            # print(reply)
             self.job_info.output = reply
 
             # Export results
             self.job_info.export()
 
         elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
-            from PyQt5.QtCore import QMetaObject, Q_ARG, Qt
+            self.wait = True
+            # Send Job Id to GUI Thread
+            self.id_signal.emit(self.job_info.id)      
 
-            print("Job not available anymore")
-            # self.id.emit(self.job_info.id)
-            
-            # QMetaObject.invokeMethod(
-            #     'msg_results_not_available',
-            #     Qt.QueuedConnection,
-            #     Q_ARG(int, self.job_info.id)
-            # )
-            # TODO: QMessageBox informing that job is not available anymore.
-            # Jobs are kept for x days after completion
+            # Remove job id from .KVFinder-web
+            job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.job_info.id)
+            try:
+                self.erase_job_dir(job_dn)
+            except:
+                pass
 
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
             print("KVFinder-web server is Offline!\n")
             # TODO: Show server status as offline
+
+
+    @pyqtSlot(bool)
+    def wait_status(self, status):
+        self.wait = status
+
+
+    @staticmethod
+    def erase_job_dir(d):
+        for f in os.listdir(d):
+            f = os.path.join(d, f)
+            if os.path.isdir(f):
+                self.erase_job_dir(f)
+            else:
+                os.remove(f)
+        os.rmdir(d)
 
 
 def KVFinderWebTools() -> None:
