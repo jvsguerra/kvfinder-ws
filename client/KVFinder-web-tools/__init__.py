@@ -257,14 +257,18 @@ class PyMOLKVFinderWebTools(QMainWindow):
     @pyqtSlot(list)
     def set_available_jobs(self, available_jobs) -> None:
         # TODO: Check if it works and put with other slots
+        # Get current selected job
         current = self.available_jobs.currentText()
-        # print(f'current: {current}')
+        
+        # Update available jobs
         self.available_jobs.clear()
         self.available_jobs.addItems(available_jobs)
-        self.available_jobs.setCurrentText(current)
-        # print([self.available_jobs.itemText(i) for i in range(self.available_jobs.count())])
 
-        # if self.available_jobs.currentText() != '':
+        # If current still in available jobs, select it
+        if current in available_jobs:
+            self.available_jobs.setCurrentText(current)
+        
+        # Fill job information
         self.fill_job_information()
 
 
@@ -278,9 +282,27 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 job_info = toml.load(f=f)
 
             # Fill job information labels
-            self.job_status_label.setText(f"Status: {job_info['status'].capitalize()}")
-        
-        pass
+            
+            status = job_info['status'].capitalize()
+            if status == 'Queued' or status == 'Running':
+                status = f'<font color=\"blue\"><b>{status}</b></font>'
+            elif status == 'Completed':
+                status = f'<font color=\"green\"><b>{status}</b></font>'
+            self.job_status_label.setText(f"Status: {status}")
+            self.job_input_label.setText(f"Input: {job_info['files']['pdb']}")
+            if 'ligand' in job_info['files'].keys():
+                self.job_ligand_label.setText(f"Ligand: {job_info['files']['ligand']}")
+            else:
+                self.job_ligand_label.setText(f"Ligand: ")
+            self.job_output_dir_path_label.setText(f"Output Directory: {job_info['files']['output']}")
+            self.job_parameters_label.setText(f"Parameters: {job_info['files']['output']}/{self.available_jobs.currentText()}/parameters.toml")
+        else:
+            # Fill job information labels
+            self.job_status_label.setText(f"Status: ")
+            self.job_input_label.setText(f"Input: ")
+            self.job_ligand_label.setText(f"Ligand: ")
+            self.job_output_dir_path_label.setText(f"Output Directory: ")
+            self.job_parameters_label.setText(f"Parameters: ")
 
 
     def _check_job_status(self) -> bool:
@@ -1086,14 +1108,17 @@ class PyMOLKVFinderWebTools(QMainWindow):
     @pyqtSlot(str)
     def msg_results_not_available(self, job_id) -> None:
         from PyQt5.QtWidgets import QMessageBox
+        from PyQt5.QtCore import QTimer, QEventLoop
 
         message = QMessageBox(self)
         message.setWindowTitle(f"Job Notification")
         message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
         message.setInformativeText('Jobs are kept for one week days after completion.')
         if message.exec_() == QMessageBox.Ok:
+
+            # Send signal to Background thread
             self.msgbox_signal.emit(False)
-        
+
         # Remove id from results
         available_jobs = self._get_available_jobs()
         self.set_available_jobs(available_jobs)
@@ -1240,7 +1265,7 @@ class Job(object):
     
     def export(self):
         # Prepare base file
-        base_dir = os.path.join(self.output_directory, self.base_name)
+        base_dir = os.path.join(self.output_directory, self.id)
 
         try:
             os.mkdir(base_dir)
@@ -1298,6 +1323,7 @@ class Background(QThread):
     def run(self) -> None:
         from PyQt5.QtCore import QTimer, QEventLoop
         
+        counter = 0
         while True:
             
             # Wait QMessageBox signal from GUI thread that deletes unavailable jobs
@@ -1316,7 +1342,7 @@ class Background(QThread):
                 print("\n\nChecking job status ...")
                 # Check all job ids
                 for job_id in jobs:
-                    print('\n->'+ job_id)
+                    print('[==> '+ job_id)
 
                     # Get job information 
                     job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
@@ -1337,6 +1363,11 @@ class Background(QThread):
 
                         if not output_exists:
                             self._get_results(job_id)
+                        else:
+                            if counter == 10:
+                                self._check_server_status()
+                                counter = 0
+                            counter += 1
 
                     # Wait 10 sec to next job_id
                     loop = QEventLoop()
@@ -1454,12 +1485,12 @@ class Background(QThread):
 
     def _check_output_exists(self):
         # Prepare base file
-        base_dir = os.path.join(self.job_info.output_directory, self.job_info.base_name)
+        base_dir = os.path.join(self.job_info.output_directory, self.job_info.id)
         
         # Get output files paths
         log = os.path.join(base_dir, 'KVFinder.log')
-        report = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.results.toml')
-        cavity = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.output.pdb')
+        report = os.path.join(base_dir, f'{self.job_info.id}.KVFinder.results.toml')
+        cavity = os.path.join(base_dir, f'{self.job_info.id}.KVFinder.output.pdb')
 
         # Check if files exist
         log_exist = os.path.exists(log)
