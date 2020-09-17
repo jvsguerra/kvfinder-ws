@@ -176,6 +176,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Ligand Adjustment
         self.refresh_ligand.clicked.connect(lambda: self.refresh(self.ligand))
 
+        # hook up methods to results tab
+        self.available_jobs.currentIndexChanged.connect(self.fill_job_information)
+
     
     def run(self) -> None:
         from PyQt5 import QtNetwork
@@ -251,6 +254,35 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return jobs
 
 
+    @pyqtSlot(list)
+    def set_available_jobs(self, available_jobs) -> None:
+        # TODO: Check if it works and put with other slots
+        current = self.available_jobs.currentText()
+        # print(f'current: {current}')
+        self.available_jobs.clear()
+        self.available_jobs.addItems(available_jobs)
+        self.available_jobs.setCurrentText(current)
+        # print([self.available_jobs.itemText(i) for i in range(self.available_jobs.count())])
+
+        # if self.available_jobs.currentText() != '':
+        self.fill_job_information()
+
+
+    def fill_job_information(self):
+        if self.available_jobs.currentText() != '': 
+            # Get job path
+            job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
+            
+            # Read job file
+            with open(job_fn, 'r') as f:
+                job_info = toml.load(f=f)
+
+            # Fill job information labels
+            self.job_status_label.setText(f"Status: {job_info['status'].capitalize()}")
+        
+        pass
+
+
     def _check_job_status(self) -> bool:
         # Get KVFinder-web server status
         server_status = self._check_server_status()
@@ -264,43 +296,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.thread.server_down.connect(self.server_down)
         self.thread.server_up.connect(self.server_up)
         self.thread.server_status_signal.connect(self.set_server_status)
+        self.thread.available_jobs_signal.connect(self.set_available_jobs)
         self.msgbox_signal.connect(self.thread.wait_status)
         
         return True
-
-
-    def _check_server_status(self):
-        # TODO: check a better way to do this
-        import urllib.request
-        try:
-            urllib.request.urlopen(self.server, timeout=1).getcode()
-            self.server_up()
-            return True
-        except:
-            self.server_down()
-            return False
-
-
-    @pyqtSlot(bool)
-    def set_server_status(self, status):
-        if status:
-            self.server_up()
-        else:
-            self.server_down()
-
-
-    @pyqtSlot()
-    def server_up(self):
-        self.server_status.clear()
-        self.server_status.setText('Online')
-        self.server_status.setStyleSheet('color: green;')
-    
-
-    @pyqtSlot()
-    def server_down(self):
-        self.server_status.clear()
-        self.server_status.setText('Offline')
-        self.server_status.setStyleSheet('color: red;') 
 
 
     def _get_results(self) -> Optional[Dict[str, Any]]:
@@ -1050,6 +1049,40 @@ class PyMOLKVFinderWebTools(QMainWindow):
         dialog = None
 
 
+    def _check_server_status(self):
+        # TODO: check a better way to do this
+        import urllib.request
+        try:
+            urllib.request.urlopen(self.server, timeout=1).getcode()
+            self.server_up()
+            return True
+        except:
+            self.server_down()
+            return False
+
+
+    @pyqtSlot(bool)
+    def set_server_status(self, status):
+        if status:
+            self.server_up()
+        else:
+            self.server_down()
+
+
+    @pyqtSlot()
+    def server_up(self):
+        self.server_status.clear()
+        self.server_status.setText('Online')
+        self.server_status.setStyleSheet('color: green;')
+    
+
+    @pyqtSlot()
+    def server_down(self):
+        self.server_status.clear()
+        self.server_status.setText('Offline')
+        self.server_status.setStyleSheet('color: red;') 
+
+
     @pyqtSlot(str)
     def msg_results_not_available(self, job_id) -> None:
         from PyQt5.QtWidgets import QMessageBox
@@ -1060,6 +1093,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         message.setInformativeText('Jobs are kept for one week days after completion.')
         if message.exec_() == QMessageBox.Ok:
             self.msgbox_signal.emit(False)
+        
+        # Remove id from results
+        available_jobs = self._get_available_jobs()
+        self.set_available_jobs(available_jobs)
 
 
 class Job(object):
@@ -1209,21 +1246,33 @@ class Job(object):
             os.mkdir(base_dir)
         except:
             pass
-        
-        # Export log
-        log = os.path.join(base_dir, 'KVFinder.log')
-        with open(log, 'w') as f:
-            f.write(self.log)
-
-        # Export report
-        report = os.path.join(base_dir, f'{self.base_name}.KVFinder.results.toml')
-        with open(report, 'w') as f:
-            f.write(self.report)
 
         # Export cavity
-        cavity = os.path.join(base_dir, f'{self.base_name}.KVFinder.output.pdb')
-        with open(cavity, 'w') as f:
+        cavity_fn = os.path.join(base_dir, f'{self.base_name}.KVFinder.output.pdb')
+        with open(cavity_fn, 'w') as f:
             f.write(self.cavity)
+
+        # Export report
+        report_fn = os.path.join(base_dir, f'{self.base_name}.KVFinder.results.toml')
+        report = toml.loads(self.report)
+        report['FILES_PATH']['INPUT'] = self.pdb
+        report['FILES_PATH']['LIGAND'] = self.ligand
+        report['FILES_PATH']['OUTPUT'] = cavity_fn
+        with open(report_fn, 'w') as f:
+            f.write('# TOML results file for parKVFinder software')
+            toml.dump(o=report, f=f)
+   
+        # Export log
+        log_fn = os.path.join(base_dir, 'KVFinder.log')
+        with open(log_fn, 'w') as f:
+            for line in self.log.split('\n'):
+                if 'Running parKVFinder for: ' in line:
+                    line = f'Running parKVFinder for job ID: {self.id}'
+                    f.write(f'{line}\n')
+                elif 'Dictionary: ' in line:
+                    pass
+                else:
+                    f.write(f'{line}\n')
 
 
 class Background(QThread):
@@ -1233,6 +1282,7 @@ class Background(QThread):
     server_down = pyqtSignal()
     server_up = pyqtSignal()
     server_status_signal = pyqtSignal(bool)
+    available_jobs_signal = pyqtSignal(list)
 
     # TODO: check if this break code
     # server_status = None
@@ -1258,6 +1308,7 @@ class Background(QThread):
                
             # Constantly getting available jobs
             jobs = self._get_jobs()
+            self.available_jobs_signal.emit(jobs)
             print(jobs)
 
             # Jobs available to check status and server up
@@ -1265,6 +1316,7 @@ class Background(QThread):
                 print("\n\nChecking job status ...")
                 # Check all job ids
                 for job_id in jobs:
+                    print('\n->'+ job_id)
 
                     # Get job information 
                     job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
@@ -1279,16 +1331,22 @@ class Background(QThread):
                         # Get request for job results
                         self._get_results(job_id)
 
-                        # Check change in status to save job file
-                        if status != self.job_info.status:
-                            self.job_info.save(job_id)
-
                     elif status == 'completed':
                         # Check if results files exist
                         output_exists = self._check_output_exists()
 
                         if not output_exists:
                             self._get_results(job_id)
+
+                    # Wait 10 sec to next job_id
+                    loop = QEventLoop()
+                    QTimer.singleShot(10000, loop.quit)
+                    loop.exec_()  
+
+                    # Check change in status to save job file
+                    # print(self.job_info.status)
+                    # if status != self.job_info.status:
+                    #     self.job_info.save(job_id)
             
             # No jobs available to check status
             else:
@@ -1313,35 +1371,6 @@ class Background(QThread):
             loop = QEventLoop()
             QTimer.singleShot(10000, loop.quit)
             loop.exec_()                 
-
-
-    def _check_server_status(self):
-        # TODO: check a better way to do this
-        import urllib.request
-        try:
-            urllib.request.urlopen(self.server, timeout=1).getcode()
-            self.server_status_signal.emit(True)
-            return True
-        except:
-            return False
-            self.server_status_signal.emit(False)
-
-
-    def _check_output_exists(self):
-        # Prepare base file
-        base_dir = os.path.join(self.job_info.output_directory, self.job_info.base_name)
-        
-        # Get output files paths
-        log = os.path.join(base_dir, 'KVFinder.log')
-        report = os.path.join(base_dir, f'{self.base_name}.KVFinder.results.toml')
-        cavity = os.path.join(base_dir, f'{self.base_name}.KVFinder.output.pdb')
-
-        # Check if files exist
-        log_exist = os.path.exists(log)
-        report_exist = os.path.exists(report)
-        cavity_exist = os.path.exists(cavity)
-
-        return log_exist and report_exist and cavity_exist
 
 
     def _get_jobs(self) -> list:       
@@ -1388,9 +1417,14 @@ class Background(QThread):
             
             # Pass outputs to Job class
             self.job_info.output = reply
+            self.job_info.status = reply['status']
+            self.job_info.save(self.job_info.id)
 
             # Export results
-            self.job_info.export()
+            try:
+                self.job_info.export()
+            except:
+                pass
 
             # Send Server Up Signal to GUI Thread
             self.server_up.emit()  
@@ -1416,6 +1450,35 @@ class Background(QThread):
             # Send Server Down Signal to GUI Thread 
             self.server_down.emit()
             # TODO: Show server status as offline
+
+
+    def _check_output_exists(self):
+        # Prepare base file
+        base_dir = os.path.join(self.job_info.output_directory, self.job_info.base_name)
+        
+        # Get output files paths
+        log = os.path.join(base_dir, 'KVFinder.log')
+        report = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.results.toml')
+        cavity = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.output.pdb')
+
+        # Check if files exist
+        log_exist = os.path.exists(log)
+        report_exist = os.path.exists(report)
+        cavity_exist = os.path.exists(cavity)
+
+        return log_exist and report_exist and cavity_exist
+
+
+    def _check_server_status(self):
+        # TODO: check a better way to do this
+        import urllib.request
+        try:
+            urllib.request.urlopen(self.server, timeout=1).getcode()
+            self.server_status_signal.emit(True)
+            return True
+        except:
+            return False
+            self.server_status_signal.emit(False)
 
 
     @pyqtSlot(bool)

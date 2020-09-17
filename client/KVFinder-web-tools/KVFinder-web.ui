@@ -663,7 +663,7 @@ The description includes spatial and constitutional characterization. The spatia
        </rect>
       </property>
       <property name="title">
-       <string>Box adjustment</string>
+       <string>Box Adjustment</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -1194,7 +1194,7 @@ The description includes spatial and constitutional characterization. The spatia
        </rect>
       </property>
       <property name="title">
-       <string>Ligand adjustment</string>
+       <string>Ligand Adjustment</string>
       </property>
       <property name="checkable">
        <bool>true</bool>
@@ -1412,7 +1412,7 @@ The description includes spatial and constitutional characterization. The spatia
             <enum>QFrame::NoFrame</enum>
            </property>
            <property name="text">
-            <string>Available jobs:</string>
+            <string>Available Jobs:</string>
            </property>
            <property name="textFormat">
             <enum>Qt::PlainText</enum>
@@ -1454,7 +1454,7 @@ The description includes spatial and constitutional characterization. The spatia
             </sizepolicy>
            </property>
            <property name="text">
-            <string>Upload ID</string>
+            <string>Add ID</string>
            </property>
           </widget>
          </item>
@@ -1517,9 +1517,9 @@ The description includes spatial and constitutional characterization. The spatia
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="job_output_dir_path">
+           <widget class="QLabel" name="job_output_dir_path_label">
             <property name="text">
-             <string>Output directory:</string>
+             <string>Output Directory:</string>
             </property>
            </widget>
           </item>
@@ -1571,7 +1571,7 @@ The description includes spatial and constitutional characterization. The spatia
                </sizepolicy>
               </property>
               <property name="text">
-               <string>Results file:</string>
+               <string>Results File:</string>
               </property>
              </widget>
             </item>
@@ -1615,21 +1615,21 @@ The description includes spatial and constitutional characterization. The spatia
           <item>
            <widget class="QLabel" name="input_file_label">
             <property name="text">
-             <string>Input file:</string>
+             <string>Input File:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="ligand_file_label">
             <property name="text">
-             <string>Ligand file:</string>
+             <string>Ligand File:</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QLabel" name="cavities_file_label">
             <property name="text">
-             <string>Cavities file:</string>
+             <string>Cavities File:</string>
             </property>
            </widget>
           </item>
