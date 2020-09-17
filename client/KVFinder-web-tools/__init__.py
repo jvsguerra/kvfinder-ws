@@ -84,7 +84,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
     """
 
     # Signals
-    msgbox_confirmed = pyqtSignal(bool)
+    msgbox_signal = pyqtSignal(bool)
 
     def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
@@ -124,16 +124,13 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Get available jobs
         self.available_jobs.addItems(self._get_available_jobs())
 
-        # Get KVFinder-web server status
-        self._check_server_status()
-
         # print("\nRunning Background Process to check job status KVFinderWebTools\n")
         # TODO: 
         # - function to check jobs id availables
         # - start checking jobs id status -> if failed: download and delete job id
         # FIXME: REMOVE -> DEBUG
         cmd.load('../examples/1FMO.pdb')
-        self.restore()
+        # self.restore()
 
 
     def initialize_gui(self) -> None:
@@ -188,7 +185,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Create job
         parameters = self.create_parameters()
-        self.job = Job(parameters)
+        if type(parameters) is dict:
+            self.job = Job(parameters)
+        else:
+            return
         
         # Post request
         try:
@@ -252,14 +252,19 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
 
     def _check_job_status(self) -> bool:
-        self.thread = Background()
+        # Get KVFinder-web server status
+        server_status = self._check_server_status()
+        
+        # Start Background thread
+        self.thread = Background(self.server, server_status)
         self.thread.start()
         
         # Communication between GUI and Background threads
         self.thread.id_signal.connect(self.msg_results_not_available)
         self.thread.server_down.connect(self.server_down)
         self.thread.server_up.connect(self.server_up)
-        self.msgbox_confirmed.connect(self.thread.wait_status)
+        self.thread.server_status_signal.connect(self.set_server_status)
+        self.msgbox_signal.connect(self.thread.wait_status)
         
         return True
 
@@ -270,7 +275,17 @@ class PyMOLKVFinderWebTools(QMainWindow):
         try:
             urllib.request.urlopen(self.server, timeout=1).getcode()
             self.server_up()
+            return True
         except:
+            self.server_down()
+            return False
+
+
+    @pyqtSlot(bool)
+    def set_server_status(self, status):
+        if status:
+            self.server_up()
+        else:
             self.server_down()
 
 
@@ -885,21 +900,19 @@ class PyMOLKVFinderWebTools(QMainWindow):
         parameters['files'] = dict()
         # pdb
         if self.input.currentText() != '':
-            # parameters['files']['pdb'] = os.path.join(self.output_dir_path.text(),self.input.currentText())
             parameters['files']['pdb'] = self.input.currentText()
         else:
             from PyQt5.QtWidgets import QMessageBox
             QMessageBox.critical(self, "Error", "Select an input PDB!")
-            return
+            return False
         # ligand
         if self.ligand_adjustment.isChecked():
             if self.ligand.currentText() != '':
-                # parameters['files']['pdb_ligand'] = os.path.join(self.output_dir_path.text(), self.ligand.currentText())
                 parameters['files']['pdb_ligand'] = self.ligand.currentText()
             else:
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.critical(self, "Error", "Select an ligand PDB!")
-                return
+                return False
         # output
         parameters['files']['output'] = self.output_dir_path.text()
         # base_name
@@ -1046,7 +1059,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
         message.setInformativeText('Jobs are kept for one week days after completion.')
         if message.exec_() == QMessageBox.Ok:
-            self.msgbox_confirmed.emit(False)
+            self.msgbox_signal.emit(False)
 
 
 class Job(object):
@@ -1217,9 +1230,19 @@ class Background(QThread):
 
     # Signals
     id_signal = pyqtSignal(str)
-    wait = False
     server_down = pyqtSignal()
-    server_up = pyqtSignal()      
+    server_up = pyqtSignal()
+    server_status_signal = pyqtSignal(bool)
+
+    # TODO: check if this break code
+    # server_status = None
+    # wait = False
+
+    def __init__(self, server, server_status):
+        super().__init__()
+        self.server = server
+        self.wait = False
+        self.server_status = server_status
 
 
     def run(self) -> None:
@@ -1232,43 +1255,76 @@ class Background(QThread):
                 loop = QEventLoop()
                 QTimer.singleShot(1000, loop.quit)
                 loop.exec_()
-            
-            print("\n\nChecking job status ...")
-            
+               
             # Constantly getting available jobs
             jobs = self._get_jobs()
             print(jobs)
 
-            # Check all job ids
-            for job_id in jobs:
+            # Jobs available to check status and server up
+            if jobs and self.server_status:
+                print("\n\nChecking job status ...")
+                # Check all job ids
+                for job_id in jobs:
 
-                # Get job information 
-                job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
-                self.job_info = Job.load(fn=job_fn)
-                self.job_info.id = job_id
+                    # Get job information 
+                    job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
+                    self.job_info = Job.load(fn=job_fn)
+                    self.job_info.id = job_id
 
-                # Save current status
-                status = self.job_info.status
+                    # Save current status
+                    status = self.job_info.status
 
-                # Handle job status
-                if status == 'queued' or status == 'running':
-                    # Get request for job results
-                    self._get_results(job_id)
-
-                    # Check change in status to save job file
-                    if status != self.job_info.status:
-                        self.job_info.save(job_id)
-
-                elif status == 'completed':
-                    # Check if results files exist
-                    output_exists = self._check_output_exists()
-
-                    if not output_exists:
+                    # Handle job status
+                    if status == 'queued' or status == 'running':
+                        # Get request for job results
                         self._get_results(job_id)
+
+                        # Check change in status to save job file
+                        if status != self.job_info.status:
+                            self.job_info.save(job_id)
+
+                    elif status == 'completed':
+                        # Check if results files exist
+                        output_exists = self._check_output_exists()
+
+                        if not output_exists:
+                            self._get_results(job_id)
             
+            # No jobs available to check status
+            else:
+                # Check server status
+
+                while not ( status := self._check_server_status() ):
+                    # Send signal that server is down
+                    # self.server_status_signal.emit(status)
+                    
+                    print('Checking server status ... \n')
+                    # Wait 60 sec to repeat
+                    loop = QEventLoop()
+                    QTimer.singleShot(60000, loop.quit)
+                    loop.exec_()
+
+                # Update server_status value
+                self.server_status = status
+                # Send signal that server is up
+                # self.server_status_signal.emit(self.server_status)
+            
+            # Wait 10 sec to repeat
             loop = QEventLoop()
             QTimer.singleShot(10000, loop.quit)
-            loop.exec_()
+            loop.exec_()                 
+
+
+    def _check_server_status(self):
+        # TODO: check a better way to do this
+        import urllib.request
+        try:
+            urllib.request.urlopen(self.server, timeout=1).getcode()
+            self.server_status_signal.emit(True)
+            return True
+        except:
+            return False
+            self.server_status_signal.emit(False)
 
 
     def _check_output_exists(self):
@@ -1307,7 +1363,7 @@ class Background(QThread):
             # self.network_manager.finished.connect(self._handle_get_response)
 
             # Prepare request
-            url = QUrl(f'http://localhost:8081/{job_id}')
+            url = QUrl(f'{self.server}/{job_id}')
             request = QtNetwork.QNetworkRequest(url)
             request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
 
