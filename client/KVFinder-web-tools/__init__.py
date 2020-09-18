@@ -1087,30 +1087,31 @@ class PyMOLKVFinderWebTools(QMainWindow):
             # Fill job information labels
             status = job_info['status'].capitalize()
             if status == 'Queued' or status == 'Running':
-                status = f'<font color=\"blue\"><b>{status}</b></font>'
+                self.job_status_entry.setText(status)
+                self.job_status_entry.setStyleSheet('color: blue;')
             elif status == 'Completed':
-                status = f'<font color=\"green\"><b>{status}</b></font>'
-            self.job_status_label.setText(f"Status: {status}")
-            self.job_input_label.setText(f"Input: {job_info['files']['pdb']}")
+                self.job_status_entry.setText(status)
+                self.job_status_entry.setStyleSheet('color: green;')
+            self.job_input_entry.setText(f"{job_info['files']['pdb']}")
             if 'ligand' in job_info['files'].keys():
-                self.job_ligand_label.setText(f"Ligand: {job_info['files']['ligand']}")
+                self.job_ligand_entry.setText(f"{job_info['files']['ligand']}")
             else:
-                self.job_ligand_label.setText(f"Ligand: ")
-            self.job_output_dir_path_label.setText(f"Output Directory: {job_info['files']['output']}")
+                self.job_ligand_entry.clear()
+            self.job_output_dir_path_entry.setText(f"{job_info['files']['output']}")
             if 'is_added_manually' in job_info.keys():
                 if job_info['is_added_manually']:
-                    self.job_parameters_label.setText(f"Parameters: Not available")
+                    self.job_parameters_entry.setText(f"Not available")
             else:
-                self.job_parameters_label.setText(f"Parameters: {job_info['files']['output']}/{self.available_jobs.currentText()}/{job_info['files']['base_name']}_parameters.toml")
+                self.job_parameters_entry.setText(f"{job_info['files']['output']}/{self.available_jobs.currentText()}/{job_info['files']['base_name']}_parameters.toml")
         else:
             # Disable button
             self.button_show_job.setEnabled(False)
             # Fill job information labels
-            self.job_status_label.setText(f"Status: ")
-            self.job_input_label.setText(f"Input: ")
-            self.job_ligand_label.setText(f"Ligand: ")
-            self.job_output_dir_path_label.setText(f"Output Directory: ")
-            self.job_parameters_label.setText(f"Parameters: ")
+            self.job_status_entry.clear()
+            self.job_input_entry.clear()
+            self.job_ligand_entry.clear()
+            self.job_output_dir_path_entry.clear()
+            self.job_parameters_entry.clear()
 
 
     @pyqtSlot(str)
