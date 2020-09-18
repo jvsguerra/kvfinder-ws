@@ -254,57 +254,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return jobs
 
 
-    @pyqtSlot(list)
-    def set_available_jobs(self, available_jobs) -> None:
-        # TODO: Check if it works and put with other slots
-        # Get current selected job
-        current = self.available_jobs.currentText()
-        
-        # Update available jobs
-        self.available_jobs.clear()
-        self.available_jobs.addItems(available_jobs)
-
-        # If current still in available jobs, select it
-        if current in available_jobs:
-            self.available_jobs.setCurrentText(current)
-        
-        # Fill job information
-        self.fill_job_information()
-
-
-    def fill_job_information(self):
-        if self.available_jobs.currentText() != '': 
-            # Get job path
-            job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
-            
-            # Read job file
-            with open(job_fn, 'r') as f:
-                job_info = toml.load(f=f)
-
-            # Fill job information labels
-            
-            status = job_info['status'].capitalize()
-            if status == 'Queued' or status == 'Running':
-                status = f'<font color=\"blue\"><b>{status}</b></font>'
-            elif status == 'Completed':
-                status = f'<font color=\"green\"><b>{status}</b></font>'
-            self.job_status_label.setText(f"Status: {status}")
-            self.job_input_label.setText(f"Input: {job_info['files']['pdb']}")
-            if 'ligand' in job_info['files'].keys():
-                self.job_ligand_label.setText(f"Ligand: {job_info['files']['ligand']}")
-            else:
-                self.job_ligand_label.setText(f"Ligand: ")
-            self.job_output_dir_path_label.setText(f"Output Directory: {job_info['files']['output']}")
-            self.job_parameters_label.setText(f"Parameters: {job_info['files']['output']}/{self.available_jobs.currentText()}/parameters.toml")
-        else:
-            # Fill job information labels
-            self.job_status_label.setText(f"Status: ")
-            self.job_input_label.setText(f"Input: ")
-            self.job_ligand_label.setText(f"Ligand: ")
-            self.job_output_dir_path_label.setText(f"Output Directory: ")
-            self.job_parameters_label.setText(f"Parameters: ")
-
-
     def _check_job_status(self) -> bool:
         # Get KVFinder-web server status
         server_status = self._check_server_status()
@@ -1105,23 +1054,78 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.server_status.setStyleSheet('color: red;') 
 
 
+    @pyqtSlot(list)
+    def set_available_jobs(self, available_jobs) -> None:
+        # TODO: Check if it works and put with other slots
+        # Get current selected job
+        current = self.available_jobs.currentText()
+        
+        # Update available jobs
+        self.available_jobs.clear()
+        self.available_jobs.addItems(available_jobs)
+
+        # If current still in available jobs, select it
+        if current in available_jobs:
+            self.available_jobs.setCurrentText(current)
+        
+        # Fill job information
+        self.fill_job_information()
+
+
+    def fill_job_information(self):
+        if self.available_jobs.currentText() != '': 
+            # Disable button
+            self.button_show_job.setEnabled(True)
+
+            # Get job path
+            job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
+            
+            # Read job file
+            with open(job_fn, 'r') as f:
+                job_info = toml.load(f=f)
+
+            # Fill job information labels
+            status = job_info['status'].capitalize()
+            if status == 'Queued' or status == 'Running':
+                status = f'<font color=\"blue\"><b>{status}</b></font>'
+            elif status == 'Completed':
+                status = f'<font color=\"green\"><b>{status}</b></font>'
+            self.job_status_label.setText(f"Status: {status}")
+            self.job_input_label.setText(f"Input: {job_info['files']['pdb']}")
+            if 'ligand' in job_info['files'].keys():
+                self.job_ligand_label.setText(f"Ligand: {job_info['files']['ligand']}")
+            else:
+                self.job_ligand_label.setText(f"Ligand: ")
+            self.job_output_dir_path_label.setText(f"Output Directory: {job_info['files']['output']}")
+            if 'is_added_manually' in job_info.keys():
+                if job_info['is_added_manually']:
+                    self.job_parameters_label.setText(f"Parameters: Not available")
+            else:
+                self.job_parameters_label.setText(f"Parameters: {job_info['files']['output']}/{self.available_jobs.currentText()}/{job_info['files']['base_name']}_parameters.toml")
+        else:
+            # Disable button
+            self.button_show_job.setEnabled(False)
+            # Fill job information labels
+            self.job_status_label.setText(f"Status: ")
+            self.job_input_label.setText(f"Input: ")
+            self.job_ligand_label.setText(f"Ligand: ")
+            self.job_output_dir_path_label.setText(f"Output Directory: ")
+            self.job_parameters_label.setText(f"Parameters: ")
+
+
     @pyqtSlot(str)
     def msg_results_not_available(self, job_id) -> None:
         from PyQt5.QtWidgets import QMessageBox
         from PyQt5.QtCore import QTimer, QEventLoop
 
+        # Message Box
         message = QMessageBox(self)
         message.setWindowTitle(f"Job Notification")
         message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
         message.setInformativeText('Jobs are kept for one week days after completion.')
         if message.exec_() == QMessageBox.Ok:
-
             # Send signal to Background thread
             self.msgbox_signal.emit(False)
-
-        # Remove id from results
-        available_jobs = self._get_available_jobs()
-        self.set_available_jobs(available_jobs)
 
 
 class Job(object):
@@ -1299,6 +1303,27 @@ class Job(object):
                 else:
                     f.write(f'{line}\n')
 
+        # Export parameters
+        if not self.id_added_manually:
+            parameter_fn = os.path.join(self.output_directory, self.id, f'{self.base_name}_parameters.toml')
+            with open(parameter_fn, 'w') as f:
+                f.write("# TOML configuration file for KVFinder-web job.\n\n")
+                f.write("title = \"KVFinder-web parameters file\"\n\n")
+                f.write(f"[files]\n")
+                f.write("# The path of the input PDB file.\n")
+                f.write(f"pdb = \"{self.pdb}\"\n")
+                f.write("# The path for the ligand's PDB file.\n")
+                if self.ligand is not None:
+                    f.write(f"ligand = \"{self.ligand}\"\n")
+                else:
+                    f.write(f"ligand = \"-\"\n")
+                f.write('\n')
+                f.write(f"[settings]\n")
+                f.write(f"# Settings for cavity detection.\n\n")
+                settings = {'settings': self.input['settings']}
+                toml.dump(o=settings, f=f)
+                f.write('\n')
+
 
 class Background(QThread):
 
@@ -1373,11 +1398,6 @@ class Background(QThread):
                     loop = QEventLoop()
                     QTimer.singleShot(10000, loop.quit)
                     loop.exec_()  
-
-                    # Check change in status to save job file
-                    # print(self.job_info.status)
-                    # if status != self.job_info.status:
-                    #     self.job_info.save(job_id)
             
             # No jobs available to check status
             else:
@@ -1472,15 +1492,14 @@ class Background(QThread):
             job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.job_info.id)
             try:
                 self.erase_job_dir(job_dn)
+                self.available_jobs_signal.emit(self._get_jobs())
             except:
                 pass
 
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
             print("KVFinder-web server is Offline!\n")
-            
             # Send Server Down Signal to GUI Thread 
             self.server_down.emit()
-            # TODO: Show server status as offline
 
 
     def _check_output_exists(self):
@@ -1489,15 +1508,20 @@ class Background(QThread):
         
         # Get output files paths
         log = os.path.join(base_dir, 'KVFinder.log')
-        report = os.path.join(base_dir, f'{self.job_info.id}.KVFinder.results.toml')
-        cavity = os.path.join(base_dir, f'{self.job_info.id}.KVFinder.output.pdb')
+        report = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.results.toml')
+        cavity = os.path.join(base_dir, f'{self.job_info.base_name}.KVFinder.output.pdb')
+        if not self.job_info.id_added_manually:
+            parameters = os.path.join(base_dir, f'{self.job_info.base_name}_parameters.toml')
+        else:
+            parameters = True
 
         # Check if files exist
         log_exist = os.path.exists(log)
         report_exist = os.path.exists(report)
         cavity_exist = os.path.exists(cavity)
+        parameters_exist = os.path.exists(parameters)
 
-        return log_exist and report_exist and cavity_exist
+        return log_exist and report_exist and cavity_exist and parameters
 
 
     def _check_server_status(self):
