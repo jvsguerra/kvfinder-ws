@@ -105,7 +105,7 @@ The description includes spatial and constitutional characterization. The spatia
     <item row="3" column="0">
      <layout class="QHBoxLayout" name="dialog_buttons">
       <property name="spacing">
-       <number>100</number>
+       <number>6</number>
       </property>
       <property name="leftMargin">
        <number>20</number>
@@ -115,6 +115,12 @@ The description includes spatial and constitutional characterization. The spatia
       </property>
       <item>
        <widget class="QPushButton" name="button_run">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string notr="true">Run KVFinder-web</string>
         </property>
@@ -122,6 +128,12 @@ The description includes spatial and constitutional characterization. The spatia
       </item>
       <item>
        <widget class="QPushButton" name="button_grid">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Show Grid</string>
         </property>
@@ -129,6 +141,12 @@ The description includes spatial and constitutional characterization. The spatia
       </item>
       <item>
        <widget class="QPushButton" name="button_restore">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>Restore Default Values</string>
         </property>
@@ -136,6 +154,12 @@ The description includes spatial and constitutional characterization. The spatia
       </item>
       <item>
        <widget class="QPushButton" name="button_exit">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string notr="true">Exit</string>
         </property>
