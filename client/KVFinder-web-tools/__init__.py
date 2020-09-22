@@ -99,7 +99,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.initialize_gui()
         
         # Restore Default Parameters
-        self.restore()
+        self.restore(is_startup=True)
         
         # Set box centers
         self.x = 0.0
@@ -138,8 +138,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
         Qt elements are located in self
         """
         # pymol.Qt provides the PyQt5 interface
-        from pymol.Qt import QtWidgets
-        from pymol.Qt.utils import loadUi
+        from PyQt5 import QtWidgets
+        from PyQt5.uic import loadUi
+        # from pymol.Qt.utils import loadUi
 
         # populate the QMainWindow from our *.ui file
         uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
@@ -177,7 +178,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.refresh_ligand.clicked.connect(lambda: self.refresh(self.ligand))
 
         # hook up methods to results tab
+        # Jobs
         self.available_jobs.currentIndexChanged.connect(self.fill_job_information)
+        self.button_show_job.clicked.connect(self.show_id)
+        # Visualization
+        self.button_browse_results.clicked.connect(self.select_results_file)
+        self.button_load_results.clicked.connect(self.load_results)
 
     
     def run(self) -> None:
@@ -273,14 +279,209 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return True
 
 
-    def _get_results(self) -> Optional[Dict[str, Any]]:
-        # TODO: function to get and prepare results from server
-        pass
+    def load_results(self) -> None:
+        from pymol import cmd
+
+        # Get results file
+        results_file = self.vis_results_file_entry.text()
+        
+        # Check if results file exist
+        if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
+            print(f"Loading results from: {self.vis_results_file_entry.text()}\n\n")
+        else:
+            from PyQt5.QtWidgets import QMessageBox
+            error_msg = QMessageBox.critical(self, "Error", "Results file cannot be opened! Check results file path.")
+            return False
+
+        # Create global variable for results
+        global results
+
+        # Read results file 
+        results = toml.load(results_file)
+
+        # Refresh information
+        self.refresh_information()
+
+        # Refresh volume
+        self.refresh_volume()
+
+        # Refresh area
+        self.refresh_area()
+
+        # Refresh residues
+        self.refresh_residues()
+
+        # Load files as PyMOL objects
+        cmd.delete("cavities")
+        cmd.delete("residues")
+        cmd.frame(1)
+
+        # Load input
+        input_fn = results['FILES_PATH']['INPUT']
+        self.load_file(input_fn)
+
+        # Load ligand
+        if 'LIGAND' in results['FILES_PATH']['LIGAND']:
+            ligand_fn = results['FILES_PATH']['LIGAND']
+            self.load_file(ligand_fn)
+
+        # Load cavity  
+        cavity_fn = results['FILES_PATH']['OUTPUT']
+        self.load_cavity(cavity_fn)
+
+        # TODO: Handle if results already loaded
+
+        return
 
 
-    def _show_results(self) -> None:
-        # TODO: show results into PyMOL viewer and GUI
-        pass
+    @staticmethod
+    def load_cavity(fname):
+        from pymol import cmd
+
+        # Get cavity name
+        cavity_name = os.path.basename(fname.replace('.pdb', ''))
+        
+        # Remove previous results in objects with same cavity name
+        for obj in cmd.get_names("all"):
+            if cavity_name == obj:
+                cmd.delete(obj)
+        
+        # Load cavity filename
+        if os.path.exists(fname):
+            cmd.load(fname, cavity_name, zoom=0)
+            cmd.hide('everything', cavity_name)
+            cmd.show('nonbonded', cavity_name)
+
+
+    @staticmethod
+    def load_file(fname):
+        from pymol import cmd
+
+        # Get name
+        name = os.path.basename(fname.replace('.pdb', ''))
+        
+        # Remove previous results in objects with same cavity name
+        for obj in cmd.get_names("all"):
+            if name == obj:
+                cmd.delete(obj)
+        
+        # Load cavity filename
+        if os.path.exists(fname):
+            cmd.load(fname, name, zoom=0)
+
+
+    def select_results_file(self) -> None:
+        """ 
+        Callback for the "Browse ..." button
+        Open a QFileDialog to select a directory.
+        """
+        from PyQt5.QtWidgets import QFileDialog
+        from PyQt5.QtCore import QUrl, QDir
+        
+        
+        # Get results file
+        fname, _ = QFileDialog.getOpenFileName(self, caption='Choose KVFinder Results File', directory=os.getcwd(), filter="KVFinder Results File (*.KVFinder.results.toml)")
+
+        if fname:
+            fname = QDir.toNativeSeparators(fname)
+            if os.path.exists(fname):
+                self.vis_results_file_entry.setText(fname)
+
+        return
+
+
+    def refresh_information(self) -> None:
+        # Input File
+        self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
+
+        # Ligand File
+        if 'LIGAND' in results['FILES_PATH'].keys():
+            self.vis_ligand_file_entry.setText(f"{results['FILES_PATH']['LIGAND']}")
+        else:
+            self.vis_ligand_file_entry.setText(f"")
+        
+        # Cavities File
+        self.vis_cavities_file_entry.setText(f"{results['FILES_PATH']['OUTPUT']}")
+
+        # Step Size
+        self.vis_step_size_entry.setText(f"{results['PARAMETERS']['STEP_SIZE']:.2f}")
+
+        return
+
+
+    def refresh_volume(self) -> None:
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['VOLUME'].keys())
+        # Include Volume
+        for index in indexes:
+            item = f"{index}: {results['RESULTS']['VOLUME'][index]}"
+            self.volume_list.addItem(item)
+        return
+
+
+    def refresh_area(self) -> None:
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['AREA'].keys())
+        # Include Area
+        for index in indexes:
+            item = f"{index}: {results['RESULTS']['AREA'][index]}"
+            self.area_list.addItem(item)
+        return
+
+    
+    def refresh_residues(self):
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['RESIDUES'].keys())
+        # Include Interface Residues
+        for index in indexes:
+            self.residues_list.addItem(index)
+        return
+
+
+    def clean_results(self):
+        # Input File
+        self.vis_input_file_entry.setText(f"")
+
+        # Ligand File
+        self.vis_ligand_file_entry.setText(f"")
+        
+        # Cavities File
+        self.vis_cavities_file_entry.setText(f"")
+
+        # Step Size
+        self.vis_step_size_entry.setText(f"")
+
+        # Volume
+        self.volume_list.clear()
+
+        # Area
+        self.area_list.clear()
+
+        # Residues
+        self.residues_list.clear()
+
+
+    def show_id(self) -> None:
+        # Get job ID
+        job_id = self.available_jobs.currentText()
+        print(f"Displaying results from job ID: {job_id}\n")
+        
+        # Get job path
+        job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
+
+        # Get job information of ID
+        with open(job_fn, 'r') as f:
+            job_info = toml.load(f=f)
+
+        # Set results file
+        results_file = f"{job_info['files']['output']}/{job_id}/{job_info['files']['base_name']}.KVFinder.results.toml"
+        self.vis_results_file_entry.setText(results_file)
+
+        # Select Visualization tab
+        self.results_tabs.setCurrentIndex(1)
+
+        # Load results
+        self.load_results()
 
 
     def show_grid(self) -> None:
@@ -290,7 +491,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         :return: Call draw_grid function with minimum and maximum coordinates or return Error.
         """
         from pymol import cmd
-        from pymol.Qt import QtWidgets
+        from PyQt5 import QtWidgets
 
         global x, y, z
 
@@ -452,16 +653,35 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cmd.delete("vertices")
 
 
-    def restore(self) -> None:
+    def restore(self, is_startup=False) -> None:
         """
         Callback for the "Restore Default Values" button
         """
         from pymol import cmd
+        from PyQt5.QtWidgets import QMessageBox
+
+        # Restore Results Tab
+        # TODO: Finish it
+        if not is_startup:
+            reply = QMessageBox.question(self, "Restore Values", "Also restore Results Visualization tab?", QMessageBox.Yes, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                ## Remove cavities, residues and last_object objects
+                cmd.delete("cavities")
+                cmd.delete("residues")
+                # cmd.delete(self.last_object.get())
+                # self.last_object.set("")
+                # if self.loaded_results.get():
+                #     cmd.delete(self.last_input.get())
+                #     cmd.delete(self.last_ligand.get())
+                #     self.last_input.set("")
+                #     self.last_ligand.set("")
+                cmd.frame(1)
+                self.clean_results()
 
         print('Restoring values ...\n')
         # Restore PDB and ligand input
         self.refresh(self.input)
-        self.refresh(self.ligand) # TODO: think what is better
+        self.refresh(self.ligand)
         
         # Delete grid
         cmd.delete("grid")
@@ -847,7 +1067,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
 
     def box_adjustment_help(self) -> None:
-        from pymol.Qt import QtWidgets, QtCore
+        from PyQt5 import QtWidgets, QtCore
         text = QtCore.QCoreApplication.translate("KVFinderWeb", u"<html><head/><body><p align=\"justify\"><span style=\" font-weight:600; text-decoration: underline;\">Box Adjustment mode:</span></p><p align=\"justify\">- Create a selection (optional);</p><p align=\"justify\">- Define a <span style=\" font-weight:600;\">Padding</span> (optional);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Draw Box</span> button.</p><p align=\"justify\"><br/><span style=\"text-decoration: underline;\">Customize your <span style=\" font-weight:600;\">box</span></span>:</p><p align=\"justify\">- Change one item at a time (e.g. <span style=\" font-style:italic;\">Padding</span>, <span style=\" font-style:italic;\">Minimum X</span>, <span style=\" font-style:italic;\">Maximum X</span>, ...);</p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Redraw Box</span> button.<br/></p><p><span style=\" font-weight:400; text-decoration: underline;\">Delete </span><span style=\" text-decoration: underline;\">box</span><span style=\" font-weight:400; text-decoration: underline;\">:</span></p><p align=\"justify\">- Click on <span style=\" font-weight:600;\">Delete Box</span> button.<br/></p><p align=\"justify\"><span style=\"text-decoration: underline;\">Colors of the <span style=\" font-weight:600;\">box</span> object:</span></p><p align=\"justify\">- <span style=\" font-weight:600;\">Red</span> corresponds to <span style=\" font-weight:600;\">X</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Green</span> corresponds to <span style=\" font-weight:600;\">Y</span> axis;</p><p align=\"justify\">- <span style=\" font-weight:600;\">Blue</span> corresponds to <span style=\" font-weight:600;\">Z</span> axis.</p></body></html>", None)
         help_information = QtWidgets.QMessageBox(self)
         help_information.setText(text)
@@ -1074,9 +1294,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def fill_job_information(self):
         if self.available_jobs.currentText() != '': 
-            # Disable button
-            self.button_show_job.setEnabled(True)
-
             # Get job path
             job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
             
@@ -1089,9 +1306,13 @@ class PyMOLKVFinderWebTools(QMainWindow):
             if status == 'Queued' or status == 'Running':
                 self.job_status_entry.setText(status)
                 self.job_status_entry.setStyleSheet('color: blue;')
+                # Disable button
+                self.button_show_job.setEnabled(False)
             elif status == 'Completed':
                 self.job_status_entry.setText(status)
                 self.job_status_entry.setStyleSheet('color: green;')
+                # Enable button
+                self.button_show_job.setEnabled(True)
             self.job_input_entry.setText(f"{job_info['files']['pdb']}")
             if 'ligand' in job_info['files'].keys():
                 self.job_ligand_entry.setText(f"{job_info['files']['ligand']}")

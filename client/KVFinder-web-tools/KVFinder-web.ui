@@ -1582,10 +1582,7 @@ The description includes spatial and constitutional characterization. The spatia
                </widget>
               </item>
               <item>
-               <widget class="QPushButton" name="button_refresh_job">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
+               <widget class="QPushButton" name="button_show_job">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1593,7 +1590,7 @@ The description includes spatial and constitutional characterization. The spatia
                  </sizepolicy>
                 </property>
                 <property name="text">
-                 <string>Refresh</string>
+                 <string>Show</string>
                 </property>
                </widget>
               </item>
@@ -1607,19 +1604,6 @@ The description includes spatial and constitutional characterization. The spatia
                 </property>
                 <property name="text">
                  <string>Add ID</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="button_show_job">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Show</string>
                 </property>
                </widget>
               </item>
@@ -1803,7 +1787,11 @@ The description includes spatial and constitutional characterization. The spatia
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="vis_results_file_entry"/>
+                  <widget class="QLineEdit" name="vis_results_file_entry">
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <widget class="QPushButton" name="button_browse_results">
@@ -1904,10 +1892,44 @@ The description includes spatial and constitutional characterization. The spatia
                  </item>
                  <item>
                   <widget class="QLineEdit" name="vis_step_size_entry">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>50</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="maxLength">
+                    <number>10</number>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignCenter</set>
+                   </property>
                    <property name="readOnly">
                     <bool>true</bool>
                    </property>
                   </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -1933,7 +1955,11 @@ The description includes spatial and constitutional characterization. The spatia
                   </widget>
                  </item>
                  <item>
-                  <widget class="QListWidget" name="volume_list"/>
+                  <widget class="QListWidget" name="volume_list">
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::MultiSelection</enum>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </item>
@@ -1950,7 +1976,11 @@ The description includes spatial and constitutional characterization. The spatia
                   </widget>
                  </item>
                  <item>
-                  <widget class="QListWidget" name="area_list"/>
+                  <widget class="QListWidget" name="area_list">
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::MultiSelection</enum>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </item>
@@ -1967,7 +1997,11 @@ The description includes spatial and constitutional characterization. The spatia
                   </widget>
                  </item>
                  <item>
-                  <widget class="QListWidget" name="residues_list"/>
+                  <widget class="QListWidget" name="residues_list">
+                   <property name="selectionMode">
+                    <enum>QAbstractItemView::MultiSelection</enum>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </item>
@@ -2090,8 +2124,6 @@ p, li { white-space: pre-wrap; }
   <tabstop>server_status</tabstop>
   <tabstop>results_tabs</tabstop>
   <tabstop>available_jobs</tabstop>
-  <tabstop>button_refresh_job</tabstop>
-  <tabstop>button_upload_job_id</tabstop>
   <tabstop>button_show_job</tabstop>
   <tabstop>job_status_entry</tabstop>
   <tabstop>job_input_entry</tabstop>
