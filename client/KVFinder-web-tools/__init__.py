@@ -118,7 +118,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         except FileExistsError:
             pass
 
-        # Background process to check available jobs status
+        # Start Worker thread to handle available jobs
         self._check_job_status()
 
         # Get available jobs
@@ -1025,11 +1025,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Get KVFinder-web server status
         server_status = self._check_server_status()
         
-        # Start Background thread
-        self.thread = Background(self.server, server_status)
+        # Start Worker thread
+        self.thread = Worker(self.server, server_status)
         self.thread.start()
         
-        # Communication between GUI and Background threads
+        # Communication between GUI and Worker threads
         self.thread.id_signal.connect(self.msg_results_not_available)
         self.thread.server_down.connect(self.server_down)
         self.thread.server_up.connect(self.server_up)
@@ -1455,7 +1455,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
         message.setInformativeText('Jobs are kept for one week days after completion.')
         if message.exec_() == QMessageBox.Ok:
-            # Send signal to Background thread
+            # Send signal to Worker thread
             self.msgbox_signal.emit(False)
 
 
@@ -1656,7 +1656,7 @@ class Job(object):
                 f.write('\n')
 
 
-class Background(QThread):
+class Worker(QThread):
 
     # Signals
     id_signal = pyqtSignal(str)

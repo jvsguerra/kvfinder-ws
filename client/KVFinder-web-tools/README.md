@@ -8,7 +8,7 @@ The KVFinder Web Tools has two threads:
 
 - **Graphical User Interface (GUI)** thread: `class PyMOLKVFinderWebTools(QMainWindow)` that handles the interface objects, slots, signals and functions;
 
-- **Background** thread: `class Background` that checks constantly the jobs sent to KVFinder-web server (https://server-url) and automatically downloads them when completed.
+- **Worker** thread: `class Worker` that checks constantly the jobs sent to KVFinder-web server (https://server-url) and automatically downloads them when completed.
 
 
 ## Possible QNetworkReply.error():
