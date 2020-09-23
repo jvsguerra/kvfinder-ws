@@ -124,13 +124,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Get available jobs
         self.available_jobs.addItems(self._get_available_jobs())
 
-        # print("\nRunning Background Process to check job status KVFinderWebTools\n")
-        # TODO: 
-        # - function to check jobs id availables
-        # - start checking jobs id status -> if failed: download and delete job id
-        # FIXME: REMOVE -> DEBUG
+        # Results
+        self.results = None
+        self.input_pdb = None
+        self.ligand_pdb = None
+        self.cavity_pdb = None
+
+        # TODO: Debug
         cmd.load('../examples/1FMO.pdb')
-        # self.restore()
 
 
     def initialize_gui(self) -> None:
@@ -184,8 +185,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Visualization
         self.button_browse_results.clicked.connect(self.select_results_file)
         self.button_load_results.clicked.connect(self.load_results)
+        self.volume_list.itemSelectionChanged.connect(lambda list1=self.volume_list, list2=self.area_list: self.show_cavities(list1, list2))
+        self.area_list.itemSelectionChanged.connect(lambda list1=self.area_list, list2=self.volume_list: self.show_cavities(list1, list2))
+        self.residues_list.itemSelectionChanged.connect(self.show_residues)
 
-    
+
     def run(self) -> None:
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
@@ -250,240 +254,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
             print(reply.errorString())
 
     
-    def _get_available_jobs(self) -> list:       
-        # Get job dir
-        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
-        
-        # Get jobs availables in dir
-        jobs = os.listdir(d)
-
-        return jobs
-
-
-    def _check_job_status(self) -> bool:
-        # Get KVFinder-web server status
-        server_status = self._check_server_status()
-        
-        # Start Background thread
-        self.thread = Background(self.server, server_status)
-        self.thread.start()
-        
-        # Communication between GUI and Background threads
-        self.thread.id_signal.connect(self.msg_results_not_available)
-        self.thread.server_down.connect(self.server_down)
-        self.thread.server_up.connect(self.server_up)
-        self.thread.server_status_signal.connect(self.set_server_status)
-        self.thread.available_jobs_signal.connect(self.set_available_jobs)
-        self.msgbox_signal.connect(self.thread.wait_status)
-        
-        return True
-
-
-    def load_results(self) -> None:
-        from pymol import cmd
-
-        # Get results file
-        results_file = self.vis_results_file_entry.text()
-        
-        # Check if results file exist
-        if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
-            print(f"Loading results from: {self.vis_results_file_entry.text()}\n\n")
-        else:
-            from PyQt5.QtWidgets import QMessageBox
-            error_msg = QMessageBox.critical(self, "Error", "Results file cannot be opened! Check results file path.")
-            return False
-
-        # Create global variable for results
-        global results
-
-        # Read results file 
-        results = toml.load(results_file)
-
-        # Refresh information
-        self.refresh_information()
-
-        # Refresh volume
-        self.refresh_volume()
-
-        # Refresh area
-        self.refresh_area()
-
-        # Refresh residues
-        self.refresh_residues()
-
-        # Load files as PyMOL objects
-        cmd.delete("cavities")
-        cmd.delete("residues")
-        cmd.frame(1)
-
-        # Load input
-        input_fn = results['FILES_PATH']['INPUT']
-        self.load_file(input_fn)
-
-        # Load ligand
-        if 'LIGAND' in results['FILES_PATH']['LIGAND']:
-            ligand_fn = results['FILES_PATH']['LIGAND']
-            self.load_file(ligand_fn)
-
-        # Load cavity  
-        cavity_fn = results['FILES_PATH']['OUTPUT']
-        self.load_cavity(cavity_fn)
-
-        # TODO: Handle if results already loaded
-
-        return
-
-
-    @staticmethod
-    def load_cavity(fname):
-        from pymol import cmd
-
-        # Get cavity name
-        cavity_name = os.path.basename(fname.replace('.pdb', ''))
-        
-        # Remove previous results in objects with same cavity name
-        for obj in cmd.get_names("all"):
-            if cavity_name == obj:
-                cmd.delete(obj)
-        
-        # Load cavity filename
-        if os.path.exists(fname):
-            cmd.load(fname, cavity_name, zoom=0)
-            cmd.hide('everything', cavity_name)
-            cmd.show('nonbonded', cavity_name)
-
-
-    @staticmethod
-    def load_file(fname):
-        from pymol import cmd
-
-        # Get name
-        name = os.path.basename(fname.replace('.pdb', ''))
-        
-        # Remove previous results in objects with same cavity name
-        for obj in cmd.get_names("all"):
-            if name == obj:
-                cmd.delete(obj)
-        
-        # Load cavity filename
-        if os.path.exists(fname):
-            cmd.load(fname, name, zoom=0)
-
-
-    def select_results_file(self) -> None:
-        """ 
-        Callback for the "Browse ..." button
-        Open a QFileDialog to select a directory.
-        """
-        from PyQt5.QtWidgets import QFileDialog
-        from PyQt5.QtCore import QUrl, QDir
-        
-        
-        # Get results file
-        fname, _ = QFileDialog.getOpenFileName(self, caption='Choose KVFinder Results File', directory=os.getcwd(), filter="KVFinder Results File (*.KVFinder.results.toml)")
-
-        if fname:
-            fname = QDir.toNativeSeparators(fname)
-            if os.path.exists(fname):
-                self.vis_results_file_entry.setText(fname)
-
-        return
-
-
-    def refresh_information(self) -> None:
-        # Input File
-        self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
-
-        # Ligand File
-        if 'LIGAND' in results['FILES_PATH'].keys():
-            self.vis_ligand_file_entry.setText(f"{results['FILES_PATH']['LIGAND']}")
-        else:
-            self.vis_ligand_file_entry.setText(f"")
-        
-        # Cavities File
-        self.vis_cavities_file_entry.setText(f"{results['FILES_PATH']['OUTPUT']}")
-
-        # Step Size
-        self.vis_step_size_entry.setText(f"{results['PARAMETERS']['STEP_SIZE']:.2f}")
-
-        return
-
-
-    def refresh_volume(self) -> None:
-        # Get cavity indexes
-        indexes = sorted(results['RESULTS']['VOLUME'].keys())
-        # Include Volume
-        for index in indexes:
-            item = f"{index}: {results['RESULTS']['VOLUME'][index]}"
-            self.volume_list.addItem(item)
-        return
-
-
-    def refresh_area(self) -> None:
-        # Get cavity indexes
-        indexes = sorted(results['RESULTS']['AREA'].keys())
-        # Include Area
-        for index in indexes:
-            item = f"{index}: {results['RESULTS']['AREA'][index]}"
-            self.area_list.addItem(item)
-        return
-
-    
-    def refresh_residues(self):
-        # Get cavity indexes
-        indexes = sorted(results['RESULTS']['RESIDUES'].keys())
-        # Include Interface Residues
-        for index in indexes:
-            self.residues_list.addItem(index)
-        return
-
-
-    def clean_results(self):
-        # Input File
-        self.vis_input_file_entry.setText(f"")
-
-        # Ligand File
-        self.vis_ligand_file_entry.setText(f"")
-        
-        # Cavities File
-        self.vis_cavities_file_entry.setText(f"")
-
-        # Step Size
-        self.vis_step_size_entry.setText(f"")
-
-        # Volume
-        self.volume_list.clear()
-
-        # Area
-        self.area_list.clear()
-
-        # Residues
-        self.residues_list.clear()
-
-
-    def show_id(self) -> None:
-        # Get job ID
-        job_id = self.available_jobs.currentText()
-        print(f"Displaying results from job ID: {job_id}\n")
-        
-        # Get job path
-        job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
-
-        # Get job information of ID
-        with open(job_fn, 'r') as f:
-            job_info = toml.load(f=f)
-
-        # Set results file
-        results_file = f"{job_info['files']['output']}/{job_id}/{job_info['files']['base_name']}.KVFinder.results.toml"
-        self.vis_results_file_entry.setText(results_file)
-
-        # Select Visualization tab
-        self.results_tabs.setCurrentIndex(1)
-
-        # Load results
-        self.load_results()
-
-
     def show_grid(self) -> None:
         """
         Callback for the "Show Grid" button
@@ -661,24 +431,25 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5.QtWidgets import QMessageBox
 
         # Restore Results Tab
-        # TODO: Finish it
         if not is_startup:
             reply = QMessageBox.question(self, "Restore Values", "Also restore Results Visualization tab?", QMessageBox.Yes, QMessageBox.No)
             if reply == QMessageBox.Yes:
-                ## Remove cavities, residues and last_object objects
+                # Remove cavities, residues and pdbs (input, ligand, cavity)
                 cmd.delete("cavities")
                 cmd.delete("residues")
-                # cmd.delete(self.last_object.get())
-                # self.last_object.set("")
-                # if self.loaded_results.get():
-                #     cmd.delete(self.last_input.get())
-                #     cmd.delete(self.last_ligand.get())
-                #     self.last_input.set("")
-                #     self.last_ligand.set("")
+                if self.input_pdb:
+                    cmd.delete(self.input_pdb)
+                if self.ligand_pdb:
+                    cmd.delete(self.ligand_pdb)
+                if self.cavity_pdb:
+                    cmd.delete(self.cavity_pdb)
+                results = self.input_pdb = self.ligand_pdb = self.cavity_pdb = None
                 cmd.frame(1)
+                
+                # Clean results
                 self.clean_results()
+                self.vis_results_file_entry.clear()
 
-        print('Restoring values ...\n')
         # Restore PDB and ligand input
         self.refresh(self.input)
         self.refresh(self.ligand)
@@ -1238,6 +1009,344 @@ class PyMOLKVFinderWebTools(QMainWindow):
         """
         global dialog
         dialog = None
+
+
+    def _get_available_jobs(self) -> list:       
+        # Get job dir
+        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
+        
+        # Get jobs availables in dir
+        jobs = os.listdir(d)
+
+        return jobs
+
+
+    def _check_job_status(self) -> bool:
+        # Get KVFinder-web server status
+        server_status = self._check_server_status()
+        
+        # Start Background thread
+        self.thread = Background(self.server, server_status)
+        self.thread.start()
+        
+        # Communication between GUI and Background threads
+        self.thread.id_signal.connect(self.msg_results_not_available)
+        self.thread.server_down.connect(self.server_down)
+        self.thread.server_up.connect(self.server_up)
+        self.thread.server_status_signal.connect(self.set_server_status)
+        self.thread.available_jobs_signal.connect(self.set_available_jobs)
+        self.msgbox_signal.connect(self.thread.wait_status)
+        
+        return True
+
+
+    def show_id(self) -> None:
+        # Get job ID
+        job_id = self.available_jobs.currentText()
+        print(f"Displaying results from job ID: {job_id}\n")
+        
+        # Get job path
+        job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
+
+        # Get job information of ID
+        with open(job_fn, 'r') as f:
+            job_info = toml.load(f=f)
+
+        # Set results file
+        results_file = f"{job_info['files']['output']}/{job_id}/{job_info['files']['base_name']}.KVFinder.results.toml"
+        self.vis_results_file_entry.setText(results_file)
+
+        # Select Visualization tab
+        self.results_tabs.setCurrentIndex(1)
+
+        # Load results
+        self.load_results()
+
+
+    def load_results(self) -> None:
+        from pymol import cmd
+
+        # Get results file
+        results_file = self.vis_results_file_entry.text()
+        
+        # Check if results file exist
+        if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
+            print(f"Loading results from: {self.vis_results_file_entry.text()}\n\n")
+        else:
+            from PyQt5.QtWidgets import QMessageBox
+            error_msg = QMessageBox.critical(self, "Error", "Results file cannot be opened! Check results file path.")
+            return False
+
+        # Create global variable for results
+        global results
+
+        # Read results file 
+        results = toml.load(results_file)
+
+        # Clean results
+        self.clean_results()
+
+        # Refresh information
+        self.refresh_information()
+
+        # Refresh volume
+        self.refresh_volume()
+
+        # Refresh area
+        self.refresh_area()
+
+        # Refresh residues
+        self.refresh_residues()
+
+        # Load files as PyMOL objects
+        cmd.delete("cavities")
+        cmd.delete("residues")
+        cmd.frame(1)
+
+        # Load input
+        input_fn = results['FILES_PATH']['INPUT']
+        self.input_pdb = os.path.basename(input_fn.replace('.pdb', ''))
+        self.load_file(input_fn, self.input_pdb)
+
+        # Load ligand
+        if 'LIGAND' in results['FILES_PATH'].keys():
+            ligand_fn = results['FILES_PATH']['LIGAND']
+            self.ligand_pdb = os.path.basename(ligand_fn.replace('.pdb', ''))
+            self.load_file(ligand_fn, self.ligand_pdb)
+        else:
+            self.ligand_pdb = None
+
+        # Load cavity
+        cavity_fn = results['FILES_PATH']['OUTPUT']
+        self.cavity_pdb = os.path.basename(cavity_fn.replace('.pdb', ''))
+        self.load_cavity(cavity_fn, self.cavity_pdb)
+
+        # TODO: Handle if results already loaded
+
+        return
+
+
+    def select_results_file(self) -> None:
+        """ 
+        Callback for the "Browse ..." button
+        Open a QFileDialog to select a directory.
+        """
+        from PyQt5.QtWidgets import QFileDialog
+        from PyQt5.QtCore import QUrl, QDir
+        
+        
+        # Get results file
+        fname, _ = QFileDialog.getOpenFileName(self, caption='Choose KVFinder Results File', directory=os.getcwd(), filter="KVFinder Results File (*.KVFinder.results.toml)")
+
+        if fname:
+            fname = QDir.toNativeSeparators(fname)
+            if os.path.exists(fname):
+                self.vis_results_file_entry.setText(fname)
+
+        return
+
+
+    @staticmethod
+    def load_cavity(fname, name):
+        from pymol import cmd
+     
+        # Remove previous results in objects with same cavity name
+        for obj in cmd.get_names("all"):
+            if name == obj:
+                cmd.delete(obj)
+        
+        # Load cavity filename
+        if os.path.exists(fname):
+            cmd.load(fname, name, zoom=0)
+            cmd.hide('everything', name)
+            cmd.show('nonbonded', name)
+
+
+    @staticmethod
+    def load_file(fname, name):
+        from pymol import cmd
+       
+        # Remove previous results in objects with same cavity name
+        for obj in cmd.get_names("all"):
+            if name == obj:
+                cmd.delete(obj)
+        
+        # Load cavity filename
+        if os.path.exists(fname):
+            cmd.load(fname, name, zoom=0)
+
+
+    def refresh_information(self) -> None:
+        # Input File
+        self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
+
+        # Ligand File
+        if 'LIGAND' in results['FILES_PATH'].keys():
+            self.vis_ligand_file_entry.setText(f"{results['FILES_PATH']['LIGAND']}")
+        else:
+            self.vis_ligand_file_entry.setText(f"")
+        
+        # Cavities File
+        self.vis_cavities_file_entry.setText(f"{results['FILES_PATH']['OUTPUT']}")
+
+        # Step Size
+        self.vis_step_size_entry.setText(f"{results['PARAMETERS']['STEP_SIZE']:.2f}")
+
+        return
+
+
+    def refresh_volume(self) -> None:
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['VOLUME'].keys())
+        # Include Volume
+        for index in indexes:
+            item = f"{index}: {results['RESULTS']['VOLUME'][index]}"
+            self.volume_list.addItem(item)
+        return
+
+
+    def refresh_area(self) -> None:
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['AREA'].keys())
+        # Include Area
+        for index in indexes:
+            item = f"{index}: {results['RESULTS']['AREA'][index]}"
+            self.area_list.addItem(item)
+        return
+
+    
+    def refresh_residues(self):
+        # Get cavity indexes
+        indexes = sorted(results['RESULTS']['RESIDUES'].keys())
+        # Include Interface Residues
+        for index in indexes:
+            self.residues_list.addItem(index)
+        return
+
+
+    def show_residues(self):
+        from pymol import cmd
+        # Get selected cavities from residues list
+        cavs = [item.text() for item in self.residues_list.selectedItems()]
+
+        # Return if no cavity is selected 
+        if len(cavs) < 1:
+            return
+        
+        # Get residues from cavities selected
+        residues = []
+        for cav in cavs:
+            for residue in results['RESULTS']['RESIDUES'][cav]:
+                if residue not in residues:
+                    residues.append(residue)
+
+        # Clean objects
+        cmd.set("auto_zoom", 0)
+        cmd.delete("res")
+        cmd.delete("residues")
+
+        # Check if input pdb is loaded
+        control = 0
+        for item in cmd.get_names("all"):
+            if item == self.input_pdb:
+                control = 1
+        if control == 0:
+            return
+
+        # Select residues
+        command = f"{self.input_pdb} and"
+        while len(residues) > 0:
+            res, chain, _ = residues.pop(0) 
+            command = f"{command} (resid {res} and chain {chain}) or"
+        command = f"{command[:-3]}"
+        cmd.select("res", command)
+
+        # Create residues object
+        cmd.create("residues", "res")
+        cmd.delete("res")
+        cmd.hide("everything", "residues")
+        cmd.show('sticks', 'residues')
+        cmd.disable(self.cavity_pdb)
+        cmd.enable(self.cavity_pdb)
+        cmd.set("auto_zoom", 1)
+
+
+    def show_cavities(self, list1, list2):
+        from pymol import cmd
+        # Get items from list1
+        cavs = [item.text()[0:3] for item in list1.selectedItems()]
+
+        # Select items of list2
+        number_of_items = list1.count()
+        for index in range(number_of_items):
+            if list2.item(index).text()[0:3] in cavs:
+                list2.item(index).setSelected(True)
+            else:
+                list2.item(index).setSelected(False)
+
+        # Return if no cavity is selected 
+        if len(cavs) < 1:
+            return
+
+        # Clean objects
+        cmd.set("auto_zoom", 0)
+        cmd.delete("cavs")
+        cmd.delete("cavities")
+        
+        # Check if cavity file is loaded
+        control = 0
+        for item in cmd.get_names("all"):
+            if item == self.cavity_pdb:
+                control = 1
+        if control == 0:
+            return
+
+        # Color filling cavity points as blue nonbonded
+        command = f"{self.cavity_pdb} and (resname "
+        while len(cavs) > 0:
+            command = f"{command}{cavs.pop(0)},"
+        command = f"{command[:-1]})"
+        cmd.select("cavs", command)
+
+        # Create cavities object with blue nonbonded
+        cmd.create("cavities", "cavs")
+        cmd.delete("cavs")
+        cmd.color("blue", "cavities")
+        cmd.show("nonbonded", "cavities")
+
+        # Color surface cavity points as red nb_spheres
+        cmd.select("cavs", "cavities and name HS")
+        cmd.color("red", "cavs")
+        cmd.show("nb_spheres", "cavs")
+        cmd.delete("cavs")
+
+        # Reset cavities output object
+        cmd.disable(self.cavity_pdb)
+        cmd.enable(self.cavity_pdb)
+        cmd.set("auto_zoom", 1)
+
+
+    def clean_results(self):
+        # Input File
+        self.vis_input_file_entry.setText(f"")
+
+        # Ligand File
+        self.vis_ligand_file_entry.setText(f"")
+        
+        # Cavities File
+        self.vis_cavities_file_entry.setText(f"")
+
+        # Step Size
+        self.vis_step_size_entry.setText(f"")
+
+        # Volume
+        self.volume_list.clear()
+
+        # Area
+        self.area_list.clear()
+
+        # Residues
+        self.residues_list.clear()
 
 
     def _check_server_status(self):
