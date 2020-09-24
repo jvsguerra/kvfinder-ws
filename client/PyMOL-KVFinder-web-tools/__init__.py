@@ -77,10 +77,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
     """
     PyMOL KVFinder Web Tools
 
-    - creates Graphical User Interface in PyQt5 in PyMOL viewer
-    - defines and connects callbacks for Qt elements
-    TODO:
-    - Prepare Results window
+    - creates Graphical User Interface with PyQt5 in PyMOL viewer
     """
 
     # Signals
@@ -131,7 +128,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.cavity_pdb = None
 
         # TODO: Debug
-        cmd.load('../examples/1FMO.pdb')
+        # cmd.load('../examples/1FMO.pdb')
 
 
     def initialize_gui(self) -> None:
@@ -144,7 +141,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # from pymol.Qt.utils import loadUi
 
         # populate the QMainWindow from our *.ui file
-        uifile = os.path.join(os.path.dirname(__file__), 'KVFinder-web.ui')
+        uifile = os.path.join(os.path.dirname(__file__), 'PyMOL-KVFinder-web-tools.ui')
         loadUi(uifile, self)
 
         # ScrollBars binded to QListWidgets in Descriptors
