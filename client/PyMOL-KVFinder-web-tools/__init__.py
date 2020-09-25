@@ -1100,12 +1100,13 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
             # Create job file
             job = Job(parameters)
+            job.id = self.data['id']
             job.id_added_manually = True
             job.status = reply['status']
             job.output = reply
 
             # Save job
-            job.save(self.data['id'])
+            job.save(job.id)
 
             # Export 
             if job.status == 'completed':
@@ -1719,7 +1720,7 @@ class Job(object):
 
         try:
             os.mkdir(base_dir)
-        except:
+        except FileExistsError:
             pass
 
         # Export cavity
@@ -1917,8 +1918,8 @@ class Worker(QThread):
             # Export results
             try:
                 self.job_info.export()
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
             # Send Server Up Signal to GUI Thread
             self.server_up.emit()  
@@ -1936,8 +1937,8 @@ class Worker(QThread):
             try:
                 self.erase_job_dir(job_dn)
                 self.available_jobs_signal.emit(self._get_jobs())
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
             print("KVFinder-web server is Offline!\n")
