@@ -1,14 +1,12 @@
-# Debuging and Coding
-*.py
-*.toml
-
-# Client core
+# PyMOL KVFinder web tools core
 PyMOL-KVFinder-web-tools/
 !PyMOL-KVFinder-web-tools/__init__.py
 !PyMOL-KVFinder-web-tools/PyMOL-KVFinder-web-tools.ui
 !PyMOL-KVFinder-web-tools/LICENSE
 !PyMOL-KVFinder-web-tools/README.md
 
-
 # python3-pip modules
 !requirements.txt
+
+# Performance evaluation scripts
+!scripts/
