@@ -101,7 +101,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Define server
         self.server = f"{server}:{port}"
         self.network_manager = QNetworkAccessManager()
-        self.network_manager.finished.connect(self._handle_post_response)
+        # self.network_manager.finished.connect(self._handle_post_response)
 
         # Create ./KVFinder-web directory for jobs
         jobs_dir = os.path.join(os.path.expanduser('~'), '.KVFinder-web')
@@ -111,7 +111,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             pass
 
         # Start Worker thread to handle available jobs
-        self._check_job_status()
+        self._start_worker_thread()
 
         # Get available jobs
         self.available_jobs.addItems(self._get_available_jobs())
@@ -207,20 +207,21 @@ class PyMOLKVFinderWebTools(QMainWindow):
             data = QJsonDocument(self.job.input)
 
             # Post requests
-            self.network_manager.post(request, data.toJson())
+            self.reply = self.network_manager.post(request, data.toJson())
+            self.reply.finished.connect(self._handle_post_response)
         except Exception as e:
             print(e)
 
 
-    def _handle_post_response(self, reply) -> None:
+    def _handle_post_response(self) -> None:
         from PyQt5 import QtNetwork
         # Get QNetworkReply error status
-        er = reply.error()
+        er = self.reply.error()
         
         # Handle Post Response
         if er == QtNetwork.QNetworkReply.NoError:
             print('Job submitted!') # TODO: QMessageBox
-            reply = json.loads(str(reply.readAll(), 'utf-8'))
+            reply = json.loads(str(self.reply.readAll(), 'utf-8'))
 
             # Results not available
             if 'output' not in reply.keys():
@@ -244,7 +245,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         else:
             print("Error ocurred: ", er)
-            print(reply.errorString())
+            print(self.reply.errorString())
 
     
     def show_grid(self) -> None:
@@ -1014,7 +1015,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return jobs
 
 
-    def _check_job_status(self) -> bool:
+    def _start_worker_thread(self) -> bool:
         # Get KVFinder-web server status
         server_status = self._check_server_status()
         
@@ -1037,8 +1038,90 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Create Form
         form = Form(self.server, self.output_dir_path.text())
         reply = form.exec_()
-        print(reply)
+        
+        if reply:
+            # Get data from form 
+            self.data = form.get_data()
+
+            # Check job id
+            self._check_job_id(self.data)
+
+        # print(form.job_id.text())
         pass
+
+
+    def _check_job_id(self, data: Dict[str, Any]):
+        from PyQt5 import QtNetwork
+        from PyQt5.QtCore import QUrl
+
+        print("Checking Job ...")
+
+        try:
+            # Prepare request
+            url = QUrl(f"{self.server}/{data['id']}")
+            request = QtNetwork.QNetworkRequest(url)
+            request.setHeader(QtNetwork.QNetworkRequest.ContentTypeHeader, "application/json")
+
+            # Get Request
+            self.reply = self.network_manager.get(request)
+            self.reply.finished.connect(self._handle_get_response)
+        except Exception as e:
+            print('Request failed!') # FIXME: Handle error in Debug
+            print(e)
+
+
+    def _handle_get_response(self):
+        from PyQt5 import QtNetwork
+
+        # Get QNetwork error status
+        error = self.reply.error()
+        # print(error)
+
+        if error == QtNetwork.QNetworkReply.NoError:
+            # Read data retrived from server
+            reply = json.loads(str(self.reply.readAll(), 'utf-8'))
+
+            # Create parameters
+            parameters = {
+                'status': reply['status'],
+                'id_added_manually': True,
+                'files': self.data['files'],
+                'modes': None,
+                'step_size': None,
+                'probes': None,
+                'cutoffs': None,
+                'visiblebox':  None,
+                'internalbox': None
+            }
+            if parameters['files']['pdb'] is not None:
+                parameters['files']['pdb'] = os.path.basename(parameters['files']['pdb']).replace('.pdb', '')
+            if parameters['files']['ligand'] is not None:
+                parameters['files']['ligand'] = os.path.basename(parameters['files']['ligand']).replace('.pdb', '')
+
+            # Create job file
+            job = Job(parameters)
+            job.id_added_manually = True
+            job.status = reply['status']
+            job.output = reply
+
+            # Save job
+            job.save(self.data['id'])
+
+            # Export 
+            if job.status == 'completed':
+                try:
+                    job.export()
+                except Exception as e:
+                    print(e)
+
+        elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
+            print('Job does not exist!')
+        
+        elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
+            print("KVFinder-web server is Offline! Try again later!\n")
+
+        # Clean data
+        self.data = None
 
 
     def show_id(self) -> None:
@@ -1105,9 +1188,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cmd.frame(1)
 
         # Load input
-        input_fn = results['FILES_PATH']['INPUT']
-        self.input_pdb = os.path.basename(input_fn.replace('.pdb', ''))
-        self.load_file(input_fn, self.input_pdb)
+        if 'INPUT' in results['FILES_PATH'].keys():
+            input_fn = results['FILES_PATH']['INPUT']
+            self.input_pdb = os.path.basename(input_fn.replace('.pdb', ''))
+            self.load_file(input_fn, self.input_pdb)
+        else:
+            self.input_pdb = None
 
         # Load ligand
         if 'LIGAND' in results['FILES_PATH'].keys():
@@ -1121,8 +1207,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cavity_fn = results['FILES_PATH']['OUTPUT']
         self.cavity_pdb = os.path.basename(cavity_fn.replace('.pdb', ''))
         self.load_cavity(cavity_fn, self.cavity_pdb)
-
-        # TODO: Handle if results already loaded
 
         return
 
@@ -1179,7 +1263,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def refresh_information(self) -> None:
         # Input File
-        self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
+        if 'input' in results['FILES_PATH'].keys():
+            self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
+        else:
+            self.vis_input_file_entry.setText(f"")
 
         # Ligand File
         if 'LIGAND' in results['FILES_PATH'].keys():
@@ -1399,7 +1486,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             self.available_jobs.setCurrentText(current)
         
         # Fill job information
-        self.fill_job_information()
+        # self.fill_job_information()
 
 
     def fill_job_information(self) -> None:
@@ -1423,15 +1510,26 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 self.job_status_entry.setStyleSheet('color: green;')
                 # Enable button
                 self.button_show_job.setEnabled(True)
-            self.job_input_entry.setText(f"{job_info['files']['pdb']}")
+            # Input file
+            if 'pdb' in job_info['files'].keys():
+                self.job_input_entry.setText(f"{job_info['files']['pdb']}")
+            else:
+                self.job_input_entry.clear()
+            # Ligand file
             if 'ligand' in job_info['files'].keys():
                 self.job_ligand_entry.setText(f"{job_info['files']['ligand']}")
             else:
                 self.job_ligand_entry.clear()
+            # Output directory
             self.job_output_dir_path_entry.setText(f"{job_info['files']['output']}")
-            if 'is_added_manually' in job_info.keys():
-                if job_info['is_added_manually']:
+            # ID added manually
+            if 'id_added_manually' in job_info.keys():
+                if job_info['id_added_manually']:
                     self.job_parameters_entry.setText(f"Not available")
+                    if 'pdb' not in job_info['files'].keys():
+                        self.job_input_entry.setText(f"Not available")
+                    if 'ligand' not in job_info['files'].keys():
+                        self.job_ligand_entry.setText(f"Not available")
             else:
                 self.job_parameters_entry.setText(f"{job_info['files']['output']}/{self.available_jobs.currentText()}/{job_info['files']['base_name']}_parameters.toml")
         else:
@@ -1513,32 +1611,36 @@ class Job(object):
 
 
     def upload(self, parameters: Optional[Dict[str, Any]]) -> None:
-        from pymol import cmd
         """ Load Job from paramters Dict """
+        from pymol import cmd
+        
         # Job Information (local)
         # Status
         self.status = parameters['status']
         # ID Added Manually
         if 'id_added_manually' in parameters.keys():
-            # if parameters['id_added_manually']:
-            self.id_added_manually = parameters['id_added_manually']
+            if parameters['id_added_manually']:
+                self.id_added_manually = parameters['id_added_manually']
         # Output directory
         self.output_directory = parameters['files']['output']
         # Base_name
         self.base_name = parameters['files']['base_name']
         # Input PDB
-        self.pdb = os.path.join(self.output_directory, parameters['files']['pdb'] + '.pdb')
-        cmd.save(self.pdb, parameters['files']['pdb'], 0,  'pdb')
+        if 'pdb' in parameters['files'].keys():
+            if parameters['files']['pdb'] is not None:
+                self.pdb = os.path.join(self.output_directory, parameters['files']['pdb'] + '.pdb')
+                cmd.save(self.pdb, parameters['files']['pdb'], 0,  'pdb')
         # Ligand PDB
         if 'ligand' in parameters['files'].keys():
-            self.ligand = os.path.join(self.output_directory, parameters['files']['ligand'] + '.pdb')
-            cmd.save(self.ligand, parameters['files']['ligand'], 0, "pdb")
-
+            if parameters['files']['ligand'] is not None:
+                self.ligand = os.path.join(self.output_directory, parameters['files']['ligand'] + '.pdb')
+                cmd.save(self.ligand, parameters['files']['ligand'], 0, "pdb")\
         # Request information (server)
         # Input PDB
-        self._add_pdb(self.pdb)
+        if self.pdb:
+            self._add_pdb(self.pdb)
         # Ligand PDB
-        if self.ligand is not None:
+        if self.ligand:
             self._add_pdb(self.ligand, is_ligand=True)
         # Settings
         self.input['settings'] = dict()
@@ -1572,9 +1674,10 @@ class Job(object):
             f.write("title = \"KVFinder-web job file\"\n\n")
             f.write(f"status = \"{self.status}\"\n\n")
             if self.id_added_manually:
-                f.write(f"id_added_manually = \"{self.id_added_manually}\"\n\n")
+                f.write(f"id_added_manually = true\n\n")
             f.write(f"[files]\n")
-            f.write(f"pdb = \"{self.pdb}\"\n")
+            if self.pdb is not None: 
+                f.write(f"pdb = \"{self.pdb}\"\n")
             if self.ligand is not None:
                 f.write(f"ligand = \"{self.ligand}\"\n")
             f.write(f"output = \"{self.output_directory}\"\n")
@@ -1592,9 +1695,20 @@ class Job(object):
             job_info = toml.load(f=f)
         
         # Fix pdb and ligand in job_info
-        job_info['files']['pdb'] = os.path.basename(job_info['files']['pdb']).replace('.pdb', '')
+        if 'pdb' in job_info['files'].keys():
+            job_info['files']['pdb'] = os.path.basename(job_info['files']['pdb']).replace('.pdb', '')
         if 'ligand' in job_info['files'].keys():
             job_info['files']['ligand'] = os.path.basename(job_info['files']['ligand']).replace('.pdb', '')
+
+        # Treat manually added id
+        if 'id_added_manually' in job_info.keys():
+            if job_info['id_added_manually']:
+                job_info['modes'] = None
+                job_info['step_size'] = None
+                job_info['probes'] = None
+                job_info['cutoffs'] = None
+                job_info['visiblebox'] = None
+                job_info['internalbox'] = None
 
         return cls(job_info)
 
@@ -1620,7 +1734,7 @@ class Job(object):
         report['FILES_PATH']['LIGAND'] = self.ligand
         report['FILES_PATH']['OUTPUT'] = cavity_fn
         with open(report_fn, 'w') as f:
-            f.write('# TOML results file for parKVFinder software')
+            f.write('# TOML results file for parKVFinder software\n\n')
             toml.dump(o=report, f=f)
    
         # Export log
@@ -1885,16 +1999,12 @@ class Form(QDialog):
 
 
     def __init__(self, server, output_dir):
-        super(Form, self).__init__()
-        from PyQt5.QtNetwork import QNetworkAccessManager
-        
+        super(Form, self).__init__()      
         # Initialize PyMOLKVFinderWebTools GUI
         self.initialize_gui(output_dir)
 
         # Define server
         self.server = server
-        self.network_manager = QNetworkAccessManager()
-        # self.network_manager.finished.connect(self._handle_post_response)
 
 
     def initialize_gui(self, output_dir):
@@ -1999,11 +2109,27 @@ class Form(QDialog):
         self.buttons.rejected.connect(self.close)
         # TODO: check if I need it
         # QMetaObject.connectSlotsByName(self)
-    
+
 
     def add_job_id(self):
-        print(f'Adding Job Id: {self.job_id.text()}')
-        return self.accept()
+        if self.job_id.text() and os.path.isdir(self.output_dir.text()) and self.base_name.text():
+            return self.accept()
+        else:
+            print('Fill required fields: Job ID, Output Base Name and Output Directory.')
+            return
+    
+    
+    def get_data(self):
+        data = {
+            'id': self.job_id.text(),
+            'files': {
+                'base_name': self.base_name.text(),
+                'output': self.output_dir.text(),
+                'pdb': self.input_file.text() if self.input_file.text() != '' else None,
+                'ligand': self.ligand_file.text() if self.ligand_file.text() != '' else None
+                }
+            }
+        return data
 
 
 def KVFinderWebTools() -> None:
