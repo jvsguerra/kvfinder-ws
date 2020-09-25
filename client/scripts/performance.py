@@ -101,6 +101,7 @@ class KVClient:
         if r.ok:
             results = r.json()
             if results['status'] == 'completed':
+                # print(results)
                 return results
             else:
                 print(results)
@@ -115,8 +116,11 @@ if __name__ == "__main__":
     kv = KVClient("http://localhost", "8081")
     # create a job using a pdb file with default configuration (code to configure is not implemented)
     job = KVJob("./examples/1FMO.pdb")
+    # print(job.input)
     # job = KVJob("./examples/1HHP.pdb")
     # send job to server and wait until completion
     kv.run(job)
+    print(job.log)
     # print job results
-    print(json.dumps(job.output, indent=2))
+    # print(job.id) # 13571372279373530022
+    # print(json.dumps(job.output, indent=2))
