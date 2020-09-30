@@ -127,7 +127,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self._start_worker_thread()
 
         # Get available jobs
-        self.available_jobs.addItems(self._get_available_jobs())
+        self.available_jobs.addItems(_get_jobs())
 
         # Results
         self.results = None
@@ -1026,16 +1026,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         dialog = None
 
 
-    def _get_available_jobs(self) -> list:       
-        # Get job dir
-        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
-        
-        # Get jobs availables in dir
-        jobs = os.listdir(d)
-
-        return jobs
-
-
     def _start_worker_thread(self) -> bool:
         # Get KVFinder-web server status
         server_status = _check_server_status(self.server)
@@ -1812,7 +1802,7 @@ class Worker(QThread):
                 loop.exec_()
                
             # Constantly getting available jobs
-            jobs = self._get_jobs()
+            jobs = _get_jobs()
             self.available_jobs_signal.emit(jobs)
             print(jobs)
 
@@ -1886,16 +1876,6 @@ class Worker(QThread):
                 QTimer.singleShot(time_no_jobs, loop.quit)
                 loop.exec_()                 
 
-
-    def _get_jobs(self) -> list:       
-        # Get job dir
-        d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
-        
-        # Get jobs availables in dir
-        jobs = os.listdir(d)
-
-        return jobs
-
     
     def _get_results(self, job_id) -> None:
         from PyQt5 import QtNetwork
@@ -1955,7 +1935,7 @@ class Worker(QThread):
             job_dn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.job_info.id)
             try:
                 self.erase_job_dir(job_dn)
-                self.available_jobs_signal.emit(self._get_jobs())
+                self.available_jobs_signal.emit(_get_jobs())
             except Exception as e:
                 print(e)
 
@@ -2147,6 +2127,16 @@ def _check_server_status(server) -> bool:
         return True
     except:
         return False
+
+
+def _get_jobs() -> list:
+    # Get job dir
+    d = os.path.join(os.path.expanduser('~'), '.KVFinder-web/')
+    
+    # Get jobs availables in dir
+    jobs = os.listdir(d)
+
+    return jobs
 
 
 def KVFinderWebTools() -> None:
