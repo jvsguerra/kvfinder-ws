@@ -1,6 +1,16 @@
-# Valuable informations for developers
+# Guide for developers
 
-This manual aims to aid developers with some relevant information about KVFinderWebTools operation. 
+This guide aims to aid developers with some relevant information about PyMOL KVFinder-web Tools operation. 
+
+## Classes
+
+### PyMOL KVFinder Web Tools
+
+### Worker
+
+### Form
+
+### Job
 
 ## Threads
 
