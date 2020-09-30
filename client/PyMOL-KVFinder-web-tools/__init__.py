@@ -12,6 +12,19 @@ from typing import Optional, Any, Dict
 # global reference to avoid garbage collection of our dialog
 dialog = None
 
+##### Relevant information #####
+# Days until job expire
+days_job_expire = 1
+
+# Timers (msec)
+time_restart_job_checks = 60000
+time_server_down = 60000
+time_between_jobs = 10000
+time_wait_status = 1000
+time_no_jobs = 10000
+################################
+
+
 
 class _Default(object):
 
@@ -223,10 +236,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
             print('Job submitted!') # TODO: QMessageBox
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
 
+            # Save job id
+            job_id = reply['id']
+
             # Results not available
             if 'output' not in reply.keys():
-                # Save job id
-                job_id = reply['id']
 
                 # Save job file
                 self.job.status = 'queued'
@@ -239,9 +253,16 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # handle job completed
                 if status == 'completed':
                     print('Job already submitted and completed!') # TODO: QMessageBox
+                
                 # handle job not completed
                 elif status == 'running':
-                    print('Job currently running') # TODO: QMessageBox               
+                    from PyQt5.QtWidgets import QMessageBox
+                    job_submission = QMessageBox(self)
+                    job_submission.setWindowTitle("Job Submission")
+                    job_submission.setText(f"Job already submitted to KVFinder-web server!\n")
+                    job_submission.setDetailedText(f"ID: {job_id}\nStatus: {status.capitalize()}\n")
+                    job_submission.setIcon(QMessageBox.Information)
+                    job_submission.exec_()  
         
         else:
             print("Error ocurred: ", er)
@@ -575,7 +596,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         import pymol
         from pymol import cmd
 
-        # Convert angle # TODO: check if it is necessary
+        # Convert angle
         angle1 = (self.angle1.value() / 180.0) * pi
         angle2 = (self.angle2.value() / 180.0) * pi
 
@@ -954,7 +975,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             min_z += self.probe_out.value()
             max_z += self.probe_out.value()
             
-        # Convert angle # TODO: check if it is necessary
+        # Convert angle
         angle1 = (angle1 / 180.0) * pi
         angle2 = (angle2 / 180.0) * pi
 
@@ -1017,7 +1038,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def _start_worker_thread(self) -> bool:
         # Get KVFinder-web server status
-        server_status = self._check_server_status()
+        server_status = _check_server_status(self.server)
         
         # Start Worker thread
         self.thread = Worker(self.server, server_status)
@@ -1438,18 +1459,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.residues_list.clear()
 
 
-    def _check_server_status(self) -> bool:
-        # TODO: check a better way to do this
-        import urllib.request
-        try:
-            urllib.request.urlopen(self.server, timeout=1).getcode()
-            self.server_up()
-            return True
-        except:
-            self.server_down()
-            return False
-
-
     @pyqtSlot(bool)
     def set_server_status(self, status) -> None:
         if status:
@@ -1795,10 +1804,11 @@ class Worker(QThread):
         counter = 0
         while True:
             
-            # Wait QMessageBox signal from GUI thread that deletes unavailable jobs
+            # Loop to wait QMessageBox signal from GUI thread that delete jobs that are no long available in KVFinder-web server
             while self.wait:
+                # Wait timer to check wait status
                 loop = QEventLoop()
-                QTimer.singleShot(1000, loop.quit)
+                QTimer.singleShot(time_wait_status, loop.quit)
                 loop.exec_()
                
             # Constantly getting available jobs
@@ -1834,38 +1844,47 @@ class Worker(QThread):
                             self._get_results(job_id)
                         else:
                             if counter == 10:
-                                self._check_server_status()
+                                if _check_server_status(self.server):
+                                    self.server_up()
+                                else:
+                                    self.server_down()
                                 counter = 0
                             counter += 1
 
-                    # Wait 10 sec to next job_id
-                    loop = QEventLoop()
-                    QTimer.singleShot(10000, loop.quit)
-                    loop.exec_()  
+                    # Wait timer to check next available job
+                    if len(jobs) > 1:
+                        loop = QEventLoop()
+                        QTimer.singleShot(time_between_jobs, loop.quit)
+                        loop.exec_()
+                
+                # Wait timer to restart available job checks
+                loop = QEventLoop()
+                QTimer.singleShot(time_restart_job_checks, loop.quit)
+                loop.exec_()  
             
             # No jobs available to check status
             else:
                 # Check server status
 
-                while not ( status := self._check_server_status() ):
+                while not ( status := _check_server_status(self.server) ):
                     # Send signal that server is down
-                    # self.server_status_signal.emit(status)
+                    self.server_status_signal.emit(status)
                     
                     print('Checking server status ... \n')
-                    # Wait 60 sec to repeat
+                    # Wait timer to repeat server status check
                     loop = QEventLoop()
-                    QTimer.singleShot(60000, loop.quit)
+                    QTimer.singleShot(time_server_down, loop.quit)
                     loop.exec_()
 
                 # Update server_status value
                 self.server_status = status
                 # Send signal that server is up
-                # self.server_status_signal.emit(self.server_status)
+                self.server_status_signal.emit(self.server_status)
             
-            # Wait 10 sec to repeat
-            loop = QEventLoop()
-            QTimer.singleShot(10000, loop.quit)
-            loop.exec_()                 
+                # Wait timer when no jobs are being checked 
+                loop = QEventLoop()
+                QTimer.singleShot(time_no_jobs, loop.quit)
+                loop.exec_()                 
 
 
     def _get_jobs(self) -> list:       
@@ -1966,18 +1985,6 @@ class Worker(QThread):
         parameters_exist = os.path.exists(parameters)
 
         return log_exist and report_exist and cavity_exist and parameters
-
-
-    def _check_server_status(self) -> bool:
-        # TODO: check a better way to do this
-        import urllib.request
-        try:
-            urllib.request.urlopen(self.server, timeout=1).getcode()
-            self.server_status_signal.emit(True)
-            return True
-        except:
-            return False
-            self.server_status_signal.emit(False)
 
 
     @pyqtSlot(bool)
@@ -2133,9 +2140,17 @@ class Form(QDialog):
         return data
 
 
+def _check_server_status(server) -> bool:
+    import urllib.request
+    try:
+        urllib.request.urlopen(server, timeout=1).getcode()
+        return True
+    except:
+        return False
+
+
 def KVFinderWebTools() -> None:
     """ Debug KVFinderWebTools """
-    # TODO: transform it in a new tools without PyMOL later
     from PyQt5.QtWidgets import QApplication
     app = QApplication(sys.argv)
     dialog = PyMOLKVFinderWebTools()
