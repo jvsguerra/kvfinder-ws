@@ -1,28 +1,51 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+#####################################################################################
+#    This is the KVFinder-web server client for PyMOL. It was developed using Qt    #
+#    interface and Python.                                                          #
+#                                                                                   #
+#    PyMOL KVFinder Web Tools is free software: you can redistribute it and/or      #    modifyit under the terms of the GNU General Public License as published        #
+#    by the Free Software Foundation, either version 3 of the License, or           #
+#    (at your option) any later version.                                            #
+#                                                                                   #
+#    PyMOL KVFinder Web Tools is distributed in the hope that it will be useful,    #
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of                 #
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                  #
+#    GNU General Public License for more details.                                   #
+#                                                                                   #
+#    You should have received a copy of the GNU General Public License  along with  #
+#    PyMOL KVFinder Web Tools.  If not, see <http://www.gnu.org/licenses/>.         #
+#                                                                                   #
+#####################################################################################
+
 from __future__ import absolute_import, print_function, annotations
 
 import os, sys, json, toml
+from typing import Optional, Any, Dict
 from PyQt5.QtWidgets import QMainWindow, QDialog
 from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal
-from typing import Optional, Any, Dict
 
 
 # global reference to avoid garbage collection of our dialog
 dialog = None
 
-##### Relevant information #####
-# Days until job expire
-days_job_expire = 1
 
-# Timers (msec)
-time_restart_job_checks = 60000
-time_server_down = 60000
-time_between_jobs = 10000
-time_wait_status = 1000
-time_no_jobs = 10000
-################################
+########## Relevant information ##########
+# Days until job expire                  #
+days_job_expire = 1                      #
+                                         #
+# Timers (msec)                          #
+time_restart_job_checks = 60000          #
+time_server_down = 60000                 #
+time_between_jobs = 10000                #
+time_wait_status = 1000                  #
+time_no_jobs = 10000                     #
+                                         #
+# Verbose: print some extra information  #
+# in GUI and Worker threads              #
+verbosity = True                         #
+##########################################
 
 
 
@@ -85,7 +108,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
     """
     PyMOL KVFinder Web Tools
 
-    - creates Graphical User Interface with PyQt5 in PyMOL viewer
+    - Create KVFinder-web client Graphical User Interface (GUI)
+    with PyQt5 in PyMOL viewer
+    - Define functions and callbacks for GUI
     """
 
     # Signals
@@ -200,7 +225,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
 
-        print('Running job in KVFinder-web server ...')
+        if verbosity:
+            print('Submitting job to KVFinder-web server ...\n')
         
         # Create job
         parameters = self.create_parameters()
@@ -233,7 +259,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Handle Post Response
         if er == QtNetwork.QNetworkReply.NoError:
-            print('Job submitted!') # TODO: QMessageBox
+            
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
 
             # Save job id
@@ -241,6 +267,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
             # Results not available
             if 'output' not in reply.keys():
+                
+                if verbosity:
+                    print('Job sucessfully submitted to KVFinder-web server!') 
+                
+                # TODO: QMessageBox: Job sucessfully submitted 
 
                 # Save job file
                 self.job.status = 'queued'
@@ -252,10 +283,13 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 
                 # handle job completed
                 if status == 'completed':
-                    print('Job already submitted and completed!') # TODO: QMessageBox
+                    if verbosity:
+                        print('Job already completed in KVFinder-web server!') 
+                    
+                    # TODO: QMessageBox
                 
                 # handle job not completed
-                elif status == 'running':
+                elif status == 'running' or status == 'queued':
                     from PyQt5.QtWidgets import QMessageBox
                     job_submission = QMessageBox(self)
                     job_submission.setWindowTitle("Job Submission")
@@ -1809,6 +1843,7 @@ class Worker(QThread):
             # Jobs available to check status and server up
             if jobs and self.server_status:
                 print("\n\nChecking job status ...")
+                
                 # Check all job ids
                 for job_id in jobs:
                     print('[==> '+ job_id)
@@ -1855,7 +1890,6 @@ class Worker(QThread):
             # No jobs available to check status
             else:
                 # Check server status
-
                 while not ( status := _check_server_status(self.server) ):
                     # Send signal that server is down
                     self.server_status_signal.emit(status)
@@ -1902,10 +1936,8 @@ class Worker(QThread):
         
         # Get QNetwork error status
         error = self.reply.error()
-        # print(error)
 
         if error == QtNetwork.QNetworkReply.NoError:
-
             # Read data retrived from server
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
             
@@ -2093,21 +2125,24 @@ class Form(QDialog):
         ########################
 
         # hook up QDialog buttons callbacks
+        self.button_browse_output_dir.clicked.connect(self.select_directory)
+        self.button_browse_input_file.clicked.connect(lambda: self.select_file(self.input_file, "Choose Input PDB File"))
+        self.button_browse_ligand_file.clicked.connect(lambda: self.select_file(self.ligand_file, "Choose Ligand PDB File"))
         self.buttons.accepted.connect(self.add_job_id)
         self.buttons.rejected.connect(self.close)
         # TODO: check if I need it
         # QMetaObject.connectSlotsByName(self)
 
 
-    def add_job_id(self):
+    def add_job_id(self) -> Optional[int]:
         if self.job_id.text() and os.path.isdir(self.output_dir.text()) and self.base_name.text():
             return self.accept()
         else:
             print('Fill required fields: Job ID, Output Base Name and Output Directory.')
-            return
+            return None
     
     
-    def get_data(self):
+    def get_data(self) -> Dict[str, Any]:
         data = {
             'id': self.job_id.text(),
             'files': {
@@ -2118,6 +2153,46 @@ class Form(QDialog):
                 }
             }
         return data
+
+    
+    def select_directory(self) -> None:
+        """ 
+        Callback for the "Browse ..." button
+        Open a QFileDialog to select a directory.
+        """
+        from PyQt5.QtWidgets import QFileDialog
+        from PyQt5.QtCore import QDir
+        
+        fname = QFileDialog.getExistingDirectory(caption='Choose Output Directory', directory=os.getcwd())
+
+        if fname:
+            fname = QDir.toNativeSeparators(fname)
+            if os.path.isdir(fname):
+                self.output_dir.setText(fname)
+
+        return
+
+
+    def select_file(self, entry: QLineEdit, caption: str) -> None:
+        """ 
+        Callback for the "Browse ..." button
+        Open a QFileDialog to select a directory.
+        """
+        from PyQt5.QtWidgets import QFileDialog
+        from PyQt5.QtCore import QDir
+        
+        
+        # Get results file
+        fname, _ = QFileDialog.getOpenFileName(self, caption=caption, directory=os.getcwd(), filter="PDB file (*.pdb)")
+
+        if fname:
+            fname = QDir.toNativeSeparators(fname)
+            if os.path.exists(fname):
+                entry.setText(fname)
+        else:
+            entry.clear()
+
+        return
 
 
 def _check_server_status(server) -> bool:
