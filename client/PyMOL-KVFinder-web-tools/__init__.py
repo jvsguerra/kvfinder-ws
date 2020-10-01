@@ -38,13 +38,19 @@ days_job_expire = 1                      #
 # Timers (msec)                          #
 time_restart_job_checks = 60000          #
 time_server_down = 60000                 #
+time_no_jobs = 60000                     #
 time_between_jobs = 10000                #
 time_wait_status = 1000                  #
-time_no_jobs = 10000                     #
                                          #
-# Verbose: print some extra information  #
-# in GUI and Worker threads              #
-verbosity = True                         #
+# Times jobs completed with downloaded   #
+# results are not checked in server      #
+times_job_completed_no_checked = 10      #
+                                         #
+# Verbosity: print extra information     #
+# 0: No extra information                #
+# 1: Print Worker information            #
+# 2: Print all information (Worker/GUI)  #
+verbosity = 2                            #
 ##########################################
 
 
@@ -139,7 +145,10 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Define server
         self.server = f"{server}:{port}"
         self.network_manager = QNetworkAccessManager()
-        # self.network_manager.finished.connect(self._handle_post_response)
+
+        # Check server status
+        status = _check_server_status(self.server)
+        self.set_server_status(status)
 
         # Create ./KVFinder-web directory for jobs
         jobs_dir = os.path.join(os.path.expanduser('~'), '.KVFinder-web')
@@ -225,8 +234,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
 
-        if verbosity:
-            print('Submitting job to KVFinder-web server ...\n')
+        if verbosity > 1:
+            print('[==> Submitting job to KVFinder-web server ...')
         
         # Create job
         parameters = self.create_parameters()
@@ -254,6 +263,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def _handle_post_response(self) -> None:
         from PyQt5 import QtNetwork
+        
         # Get QNetworkReply error status
         er = self.reply.error()
         
@@ -263,19 +273,25 @@ class PyMOLKVFinderWebTools(QMainWindow):
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
 
             # Save job id
-            job_id = reply['id']
+            # job_id = reply['id']
+            self.job.id = reply['id']
 
             # Results not available
             if 'output' not in reply.keys():
                 
-                if verbosity:
-                    print('Job sucessfully submitted to KVFinder-web server!') 
-                
-                # TODO: QMessageBox: Job sucessfully submitted 
+                if verbosity > 1:
+                    print('> Job successfully submitted to KVFinder-web server!') 
+
+                # Message to user
+                message = Message(
+                    "Job successfully submitted to KVFinder-web server!",
+                    self.job.id
+                    )
+                message.exec_()
 
                 # Save job file
                 self.job.status = 'queued'
-                self.job.save(job_id)
+                self.job.save(self.job.id)
                 
             # Job already sent to KVFinder-web server
             else:
@@ -283,23 +299,55 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 
                 # handle job completed
                 if status == 'completed':
-                    if verbosity:
-                        print('Job already completed in KVFinder-web server!') 
                     
-                    # TODO: QMessageBox
+                    if verbosity > 1:
+                        print('> Job already completed in KVFinder-web server!')
+                    
+                    # Message to user
+                    message = Message(
+                        "Job already completed in KVFinder-web server!\nDisplaying results ...",
+                        self.job.id,
+                        status
+                        )
+                    message.exec_()
+
+                    # Export results
+                    self.job.output = reply
+                    try:
+                        self.job.export()
+                    except Exception as e:
+                        print("Error occurred: ", e)
+
+                    # Save job file
+                    self.job.status = status
+                    self.job.save(self.job.id)
+
+                    # Add Job ID to Results tab
+                    self.available_jobs.addItem(self.job.id)
+                    self.available_jobs.setCurrentText(self.job.id)
+
+                    # Show ID
+                    self.show_id()
+
+                    # Select Results Tab
+                    self.tabs.setCurrentIndex(2)
                 
                 # handle job not completed
                 elif status == 'running' or status == 'queued':
-                    from PyQt5.QtWidgets import QMessageBox
-                    job_submission = QMessageBox(self)
-                    job_submission.setWindowTitle("Job Submission")
-                    job_submission.setText(f"Job already submitted to KVFinder-web server!\n")
-                    job_submission.setDetailedText(f"ID: {job_id}\nStatus: {status.capitalize()}\n")
-                    job_submission.setIcon(QMessageBox.Information)
-                    job_submission.exec_()  
+                    
+                    if verbosity > 1:
+                        print('> Job already submitted to KVFinder-web server!') 
+
+                    # Message to user
+                    message = Message(
+                        "Job already submitted to KVFinder-web server!",
+                        self.job.id,
+                        status
+                        )
+                    message.exec_()
         
         else:
-            print("Error ocurred: ", er)
+            print("Error occurred: ", er)
             print(self.reply.errorString())
 
     
@@ -569,6 +617,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         :param padding: box padding value.
         """
         from pymol import cmd
+
         # Delete Box object in PyMOL
         if "box" in cmd.get_names("selections"):
             cmd.delete("box")
@@ -1079,7 +1128,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         return True
 
 
-    def add_id(self):
+    def add_id(self) -> None:
         # Create Form
         form = Form(self.server, self.output_dir_path.text())
         reply = form.exec_()
@@ -1091,15 +1140,15 @@ class PyMOLKVFinderWebTools(QMainWindow):
             # Check job id
             self._check_job_id(self.data)
 
-        # print(form.job_id.text())
-        pass
+        return
 
 
-    def _check_job_id(self, data: Dict[str, Any]):
+    def _check_job_id(self, data: Dict[str, Any]) -> None:
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl
 
-        print("Checking Job ...")
+        if verbosity > 1:
+            print(f"> Requesting Job ID ({data['id']}) to KVFinder-web server ...")
 
         try:
             # Prepare request
@@ -1111,16 +1160,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
             self.reply = self.network_manager.get(request)
             self.reply.finished.connect(self._handle_get_response)
         except Exception as e:
-            print('Request failed!') # FIXME: Handle error in Debug
-            print(e)
+            print("Error occurred: ", e)
 
 
-    def _handle_get_response(self):
+    def _handle_get_response(self) -> None:
         from PyQt5 import QtNetwork
 
         # Get QNetwork error status
         error = self.reply.error()
-        # print(error)
 
         if error == QtNetwork.QNetworkReply.NoError:
             # Read data retrived from server
@@ -1153,18 +1200,42 @@ class PyMOLKVFinderWebTools(QMainWindow):
             # Save job
             job.save(job.id)
 
+            # Message to user
+            if verbosity > 1:
+                print("> Job successfully added!")
+            message = Message("Job successfully added!", job.id, job.status)
+            message.exec_()
+
             # Export 
             if job.status == 'completed':
                 try:
                     job.export()
                 except Exception as e:
-                    print(e)
+                    print("Error occurred: ", e)
 
         elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
-            print('Job does not exist!')
+            from PyQt5.QtWidgets import QMessageBox
+
+            # Message to user
+            if verbosity > 1:
+                print(f"> Job ID ({self.data['id']}) was not found in KVFinder-web server!")
+            message = QMessageBox.critical(
+                self, 
+                "Job Submission", 
+                f"Job ID ({self.data['id']}) was not found in KVFinder-web server!"
+                )
         
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
-            print("KVFinder-web server is Offline! Try again later!\n")
+            from PyQt5.QtWidgets import QMessageBox
+
+            # Message to user
+            if verbosity > 1:
+                print("> KVFinder-web server is Offline! Try again later!\n")
+            message = QMessageBox.critical(
+                self, 
+                "Job Submission", 
+                "KVFinder-web server is Offline!\n\nTry again later!"
+                )
 
         # Clean data
         self.data = None
@@ -1173,7 +1244,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
     def show_id(self) -> None:
         # Get job ID
         job_id = self.available_jobs.currentText()
-        print(f"Displaying results from job ID: {job_id}\n")
+
+        # Message to user
+        print(f"> Displaying results from Job ID: {job_id}")
         
         # Get job path
         job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', self.available_jobs.currentText(), 'job.toml')
@@ -1201,7 +1274,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Check if results file exist
         if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
-            print(f"Loading results from: {self.vis_results_file_entry.text()}\n\n")
+            print(f"> Loading results from: {self.vis_results_file_entry.text()}\n")
         else:
             from PyQt5.QtWidgets import QMessageBox
             error_msg = QMessageBox.critical(self, "Error", "Results file cannot be opened! Check results file path.")
@@ -1360,6 +1433,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def show_residues(self) -> None:
         from pymol import cmd
+        
         # Get selected cavities from residues list
         cavs = [item.text() for item in self.residues_list.selectedItems()]
 
@@ -1407,6 +1481,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def show_cavities(self, list1, list2) -> None:
         from pymol import cmd
+
         # Get items from list1
         cavs = [item.text()[0:3] for item in list1.selectedItems()]
 
@@ -1507,7 +1582,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     @pyqtSlot(list)
     def set_available_jobs(self, available_jobs) -> None:
-        # TODO: Check if it works and put with other slots
         # Get current selected job
         current = self.available_jobs.currentText()
         
@@ -1518,9 +1592,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # If current still in available jobs, select it
         if current in available_jobs:
             self.available_jobs.setCurrentText(current)
-        
-        # Fill job information
-        # self.fill_job_information()
 
 
     def fill_job_information(self) -> None:
@@ -1580,13 +1651,12 @@ class PyMOLKVFinderWebTools(QMainWindow):
     @pyqtSlot(str)
     def msg_results_not_available(self, job_id) -> None:
         from PyQt5.QtWidgets import QMessageBox
-        from PyQt5.QtCore import QTimer, QEventLoop
 
-        # Message Box
+        # Message to user
         message = QMessageBox(self)
         message.setWindowTitle(f"Job Notification")
         message.setText(f'Job ID: {job_id}\nThis job is not available anymore in KVFinder-web server!\n')
-        message.setInformativeText('Jobs are kept for one week days after completion.')
+        message.setInformativeText(f"Jobs are kept for {days_job_expire} days after completion.")
         if message.exec_() == QMessageBox.Ok:
             # Send signal to Worker thread
             self.msgbox_signal.emit(False)
@@ -1825,7 +1895,9 @@ class Worker(QThread):
     def run(self) -> None:
         from PyQt5.QtCore import QTimer, QEventLoop
         
+        # Times completed jobs with results are not checked in KVFinder-web server
         counter = 0
+
         while True:
             
             # Loop to wait QMessageBox signal from GUI thread that delete jobs that are no long available in KVFinder-web server
@@ -1838,15 +1910,22 @@ class Worker(QThread):
             # Constantly getting available jobs
             jobs = _get_jobs()
             self.available_jobs_signal.emit(jobs)
-            print(jobs)
+            
+            # Message to user
+            if verbosity:
+                print(f"\n[==> Currently available jobs are: {jobs}")
 
             # Jobs available to check status and server up
             if jobs and self.server_status:
-                print("\n\nChecking job status ...")
+                
+                # Flag to indicate that there is at least one job completed with downloaded results in this loop
+                flag = False
                 
                 # Check all job ids
                 for job_id in jobs:
-                    print('[==> '+ job_id)
+                    # Message to user
+                    if verbosity:
+                        print(f"> Checking Job ID: {job_id}")
 
                     # Get job information 
                     job_fn = os.path.join(os.path.expanduser('~'), '.KVFinder-web', job_id, 'job.toml')
@@ -1868,13 +1947,13 @@ class Worker(QThread):
                         if not output_exists:
                             self._get_results(job_id)
                         else:
-                            if counter == 10:
-                                if _check_server_status(self.server):
-                                    self.server_up()
-                                else:
-                                    self.server_down()
+                            # If completed jobs with results reaches times_job_completed_no_checked counter (10), try to get job results
+                            if counter == times_job_completed_no_checked:
+                                self._get_results(job_id)
                                 counter = 0
-                            counter += 1
+                            
+                            # Indicate that there is at least one job completed with downloaded
+                            flag = True
 
                     # Wait timer to check next available job
                     if len(jobs) > 1:
@@ -1882,6 +1961,11 @@ class Worker(QThread):
                         QTimer.singleShot(time_between_jobs, loop.quit)
                         loop.exec_()
                 
+                # If at least one job completed with downloaded results, increment counter
+                if flag:
+                    counter += 1
+                    flag = False
+
                 # Wait timer to restart available job checks
                 loop = QEventLoop()
                 QTimer.singleShot(time_restart_job_checks, loop.quit)
@@ -1889,16 +1973,25 @@ class Worker(QThread):
             
             # No jobs available to check status
             else:
+                # Message to user
+                if verbosity:
+                    print('> Checking KVFinder-web server status ...')
+                
                 # Check server status
                 while not ( status := _check_server_status(self.server) ):
+                    if verbosity:
+                        print("\n\033[93mWarning:\033[0m KVFinder-web server is Offline!\n")
                     # Send signal that server is down
                     self.server_status_signal.emit(status)
                     
-                    print('Checking server status ... \n')
                     # Wait timer to repeat server status check
                     loop = QEventLoop()
                     QTimer.singleShot(time_server_down, loop.quit)
                     loop.exec_()
+
+                    # Message to user
+                    if verbosity:
+                        print('> Checking KVFinder-web server status ...')
 
                 # Update server_status value
                 self.server_status = status
@@ -1908,7 +2001,7 @@ class Worker(QThread):
                 # Wait timer when no jobs are being checked 
                 loop = QEventLoop()
                 QTimer.singleShot(time_no_jobs, loop.quit)
-                loop.exec_()                 
+                loop.exec_()             
 
     
     def _get_results(self, job_id) -> None:
@@ -1917,7 +2010,6 @@ class Worker(QThread):
 
         try:
             self.network_manager = QtNetwork.QNetworkAccessManager()
-            # self.network_manager.finished.connect(self._handle_get_response)
 
             # Prepare request
             url = QUrl(f'{self.server}/{job_id}')
@@ -1928,7 +2020,7 @@ class Worker(QThread):
             self.reply = self.network_manager.get(request)
             self.reply.finished.connect(self._handle_get_response)
         except Exception as e:
-            print(e)
+            print("Error occurred: ", e)
     
 
     def _handle_get_response(self) -> None:
@@ -1938,6 +2030,7 @@ class Worker(QThread):
         error = self.reply.error()
 
         if error == QtNetwork.QNetworkReply.NoError:
+            
             # Read data retrived from server
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
             
@@ -1950,12 +2043,13 @@ class Worker(QThread):
             try:
                 self.job_info.export()
             except Exception as e:
-                print(e)
+                print("Error occurred: ", e)
 
             # Send Server Up Signal to GUI Thread
             self.server_up.emit()  
 
         elif error == QtNetwork.QNetworkReply.ContentNotFoundError:
+            
             # Send Server Up Signal to GUI Thread
             self.server_up.emit()  
             
@@ -1969,10 +2063,14 @@ class Worker(QThread):
                 self.erase_job_dir(job_dn)
                 self.available_jobs_signal.emit(_get_jobs())
             except Exception as e:
-                print(e)
+                print("Error occurred: ", e)
 
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
-            print("KVFinder-web server is Offline!\n")
+            
+            # Message to user
+            if verbosity:
+                print("\n\033[93mWarning:\033[0m KVFinder-web server is Offline!\n")
+            
             # Send Server Down Signal to GUI Thread 
             self.server_down.emit()
 
@@ -2027,9 +2125,11 @@ class Form(QDialog):
         self.server = server
 
 
-    def initialize_gui(self, output_dir):
+    def initialize_gui(self, output_dir) -> None:
         from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSpacerItem, QSizePolicy, QDialogButtonBox, QStyle
         from PyQt5.QtCore import Qt
+        
+        # Set Window Title
         self.setWindowTitle('Job ID Form')
 
         # Set alignment of QDialog
@@ -2130,19 +2230,29 @@ class Form(QDialog):
         self.button_browse_ligand_file.clicked.connect(lambda: self.select_file(self.ligand_file, "Choose Ligand PDB File"))
         self.buttons.accepted.connect(self.add_job_id)
         self.buttons.rejected.connect(self.close)
-        # TODO: check if I need it
-        # QMetaObject.connectSlotsByName(self)
 
 
     def add_job_id(self) -> Optional[int]:
+        # Handle button click by user
+        # Ok
         if self.job_id.text() and os.path.isdir(self.output_dir.text()) and self.base_name.text():
             return self.accept()
+        # Cancel
         else:
-            print('Fill required fields: Job ID, Output Base Name and Output Directory.')
+            from PyQt5.QtWidgets import QMessageBox
+            # Message to user
+            if verbosity:
+                print("Fill required fields: Job ID, Output Base Name and/or Output Directory.")
+            message = QMessageBox.critical(
+                self,
+                "Job Submission",
+                "Fill required fields: Job ID, Output Base Name and Output Directory."
+                )
             return None
     
     
     def get_data(self) -> Dict[str, Any]:
+        # Prepara data from Form in Dict
         data = {
             'id': self.job_id.text(),
             'files': {
@@ -2193,6 +2303,127 @@ class Form(QDialog):
             entry.clear()
 
         return
+
+
+class Message(QDialog):
+
+
+    def __init__(self, msg: str, job_id: str, status: Optional[str]=None):
+        super(Message, self).__init__()
+        # Initialize Message GUI
+        self.initialize_gui(msg, job_id, status)
+
+        # Set Values in Message GUI
+        self.set_values(msg, job_id, status)
+
+
+    def set_values(self, msg, job_id, status) -> None:
+        # Message
+        self.msg.setText(msg)
+
+        # Job ID
+        self.job_id.setText(job_id)
+
+        # Status
+        if status:
+            self.status.setText(status.capitalize())
+            if status == 'queued' or status == 'running':
+                self.status.setStyleSheet('color: blue;')
+            elif status == 'completed':
+                self.status.setStyleSheet('color: green;')
+
+
+    def initialize_gui(self, msg, job_id, status) -> None:
+        from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpacerItem, QSizePolicy, QDialogButtonBox, QStyle
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtGui import QFont, QIcon
+        
+        # Set Window Title
+        self.setWindowTitle('Job Submission')
+
+        # Set alignment of QDialog
+        self.vframe = QVBoxLayout(self)
+        self.setFixedSize(425, 150)
+
+        # Create message layout
+        self.hframe1 = QHBoxLayout()
+        # Icon
+        self.icon = QLabel(self)
+        pixmap = self.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(30, 30, QIcon.Active, QIcon.On)
+        self.icon.setPixmap(pixmap)
+        self.icon.setAlignment(Qt.AlignCenter)
+        # Message
+        self.msg = QLabel(self)
+        self.msg.setAlignment(Qt.AlignCenter)
+        # add to layout
+        self.hframe1.addWidget(self.icon)
+        self.hframe1.addWidget(self.msg)
+
+        # Vertical spacer
+        self.vspacer1 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        # Create Job ID layout
+        self.hframe2 = QHBoxLayout()
+        # Job ID label
+        self.job_id_label = QLabel(self)
+        self.job_id_label.setText("Job ID:")
+        self.job_id_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
+        self.job_id_label.setAlignment(Qt.AlignCenter)
+        # Job ID entry
+        self.job_id = QLineEdit(self)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.job_id.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
+        self.job_id.setReadOnly(True)
+        self.job_id.setFixedWidth(200)
+        # add to layout
+        self.hframe2.addWidget(self.job_id_label)
+        self.hframe2.addWidget(self.job_id)
+        self.hframe2.setAlignment(Qt.AlignCenter)
+
+        # Create Status layout
+        self.hframe3 = QHBoxLayout()
+        if status:
+            # Job ID label
+            self.status_label = QLabel(self)
+            self.status_label.setText("Status:")
+            self.status_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
+            self.status_label.setAlignment(Qt.AlignCenter)
+            # Job ID entry
+            self.status = QLineEdit(self)
+            self.status.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
+            self.status.setReadOnly(True)
+            font = QFont()
+            font.setBold(True)
+            self.status.setFont(font)
+            self.status.setFixedWidth(90)
+            # add to layout
+            self.hframe3.addWidget(self.status_label)
+            self.hframe3.addWidget(self.status)
+            self.hframe3.setAlignment(Qt.AlignCenter)
+
+        # Vertical spacer
+        self.vspacer2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
+
+        # Create Dialog Button Box
+        self.buttonBox = QDialogButtonBox(self)
+        self.buttonBox.setOrientation(Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok)
+        self.buttonBox.setCenterButtons(True)
+
+        # Add Widgets to layout
+        self.vframe.addLayout(self.hframe1)
+        self.vframe.addItem(self.vspacer1)
+        self.vframe.addLayout(self.hframe2)
+        self.vframe.addLayout(self.hframe3)
+        self.vframe.addItem(self.vspacer2)
+        self.vframe.addWidget(self.buttonBox)
+
+        ########################
+        ### Buttons Callback ###
+        ########################
+
+        # hook up QDialog buttons callbacks
+        self.buttonBox.accepted.connect(self.accept)
 
 
 def _check_server_status(server) -> bool:
