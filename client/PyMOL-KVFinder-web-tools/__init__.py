@@ -48,9 +48,10 @@ times_job_completed_no_checked = 10      #
                                          #
 # Verbosity: print extra information     #
 # 0: No extra information                #
-# 1: Print Worker information            #
-# 2: Print all information (Worker/GUI)  #
-verbosity = 2                            #
+# 1: Print GUI information               #
+# 2: Print Worker information            #
+# 3: Print all information (Worker/GUI)  #
+verbosity = 0                            #
 ##########################################
 
 
@@ -125,8 +126,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
     def __init__(self, server="http://localhost", port="8081"):
         super(PyMOLKVFinderWebTools, self).__init__()
         from PyQt5.QtNetwork import QNetworkAccessManager
-        # entry point to PyMOL's API
-        from pymol import cmd
 
         # Define Default Parameters
         self._default = _Default()
@@ -168,9 +167,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.input_pdb = None
         self.ligand_pdb = None
         self.cavity_pdb = None
-
-        # TODO: Debug
-        cmd.load('../examples/1FMO.pdb')
 
 
     def initialize_gui(self) -> None:
@@ -234,7 +230,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
 
-        if verbosity > 1:
+        if verbosity in [1, 3]:
             print('[==> Submitting job to KVFinder-web server ...')
         
         # Create job
@@ -279,7 +275,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             # Results not available
             if 'output' not in reply.keys():
                 
-                if verbosity > 1:
+                if verbosity in [1, 3]:
                     print('> Job successfully submitted to KVFinder-web server!') 
 
                 # Message to user
@@ -300,7 +296,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # handle job completed
                 if status == 'completed':
                     
-                    if verbosity > 1:
+                    if verbosity in [1, 3]:
                         print('> Job already completed in KVFinder-web server!')
                     
                     # Message to user
@@ -335,7 +331,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # handle job not completed
                 elif status == 'running' or status == 'queued':
                     
-                    if verbosity > 1:
+                    if verbosity in [1, 3]:
                         print('> Job already submitted to KVFinder-web server!') 
 
                     # Message to user
@@ -1147,8 +1143,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl
 
-        if verbosity > 1:
-            print(f"> Requesting Job ID ({data['id']}) to KVFinder-web server ...")
+        if verbosity in [1, 3]:
+            print(f"[==> Requesting Job ID ({data['id']}) to KVFinder-web server ...")
 
         try:
             # Prepare request
@@ -1201,7 +1197,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             job.save(job.id)
 
             # Message to user
-            if verbosity > 1:
+            if verbosity in [1, 3]:
                 print("> Job successfully added!")
             message = Message("Job successfully added!", job.id, job.status)
             message.exec_()
@@ -1217,7 +1213,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             from PyQt5.QtWidgets import QMessageBox
 
             # Message to user
-            if verbosity > 1:
+            if verbosity in [1, 3]:
                 print(f"> Job ID ({self.data['id']}) was not found in KVFinder-web server!")
             message = QMessageBox.critical(
                 self, 
@@ -1229,7 +1225,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
             from PyQt5.QtWidgets import QMessageBox
 
             # Message to user
-            if verbosity > 1:
+            if verbosity in [1, 3]:
                 print("> KVFinder-web server is Offline! Try again later!\n")
             message = QMessageBox.critical(
                 self, 
@@ -1382,7 +1378,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
     def refresh_information(self) -> None:
         # Input File
-        if 'input' in results['FILES_PATH'].keys():
+        if 'INPUT' in results['FILES_PATH'].keys():
             self.vis_input_file_entry.setText(f"{results['FILES_PATH']['INPUT']}")
         else:
             self.vis_input_file_entry.setText(f"")
@@ -1912,7 +1908,7 @@ class Worker(QThread):
             self.available_jobs_signal.emit(jobs)
             
             # Message to user
-            if verbosity:
+            if verbosity in [2, 3]:
                 print(f"\n[==> Currently available jobs are: {jobs}")
 
             # Jobs available to check status and server up
@@ -1924,7 +1920,7 @@ class Worker(QThread):
                 # Check all job ids
                 for job_id in jobs:
                     # Message to user
-                    if verbosity:
+                    if verbosity in [2, 3]:
                         print(f"> Checking Job ID: {job_id}")
 
                     # Get job information 
@@ -1974,12 +1970,12 @@ class Worker(QThread):
             # No jobs available to check status
             else:
                 # Message to user
-                if verbosity:
+                if verbosity in [2, 3]:
                     print('> Checking KVFinder-web server status ...')
                 
                 # Check server status
                 while not ( status := _check_server_status(self.server) ):
-                    if verbosity:
+                    if verbosity in [2, 3]:
                         print("\n\033[93mWarning:\033[0m KVFinder-web server is Offline!\n")
                     # Send signal that server is down
                     self.server_status_signal.emit(status)
@@ -1990,7 +1986,7 @@ class Worker(QThread):
                     loop.exec_()
 
                     # Message to user
-                    if verbosity:
+                    if verbosity in [2, 3]:
                         print('> Checking KVFinder-web server status ...')
 
                 # Update server_status value
@@ -2068,7 +2064,7 @@ class Worker(QThread):
         elif error == QtNetwork.QNetworkReply.ConnectionRefusedError:
             
             # Message to user
-            if verbosity:
+            if verbosity in [2, 3]:
                 print("\n\033[93mWarning:\033[0m KVFinder-web server is Offline!\n")
             
             # Send Server Down Signal to GUI Thread 
@@ -2241,7 +2237,7 @@ class Form(QDialog):
         else:
             from PyQt5.QtWidgets import QMessageBox
             # Message to user
-            if verbosity:
+            if verbosity in [2, 3]:
                 print("Fill required fields: Job ID, Output Base Name and/or Output Directory.")
             message = QMessageBox.critical(
                 self,
@@ -2352,6 +2348,7 @@ class Message(QDialog):
         pixmap = self.style().standardIcon(QStyle.SP_MessageBoxInformation).pixmap(30, 30, QIcon.Active, QIcon.On)
         self.icon.setPixmap(pixmap)
         self.icon.setAlignment(Qt.AlignCenter)
+        self.icon.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed))
         # Message
         self.msg = QLabel(self)
         self.msg.setAlignment(Qt.AlignCenter)
@@ -2396,6 +2393,7 @@ class Message(QDialog):
             font.setBold(True)
             self.status.setFont(font)
             self.status.setFixedWidth(90)
+            self.status.setAlignment(Qt.AlignCenter)
             # add to layout
             self.hframe3.addWidget(self.status_label)
             self.hframe3.addWidget(self.status)
