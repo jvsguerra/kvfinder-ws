@@ -161,6 +161,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         # Get available jobs
         self.available_jobs.addItems(_get_jobs())
+        self.fill_job_information()
 
         # Results
         self.results = None
@@ -1201,6 +1202,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 print("> Job successfully added!")
             message = Message("Job successfully added!", job.id, job.status)
             message.exec_()
+
+            # Include job to available jobs
+            self.available_jobs.addItem(job.id)
 
             # Export 
             if job.status == 'completed':
