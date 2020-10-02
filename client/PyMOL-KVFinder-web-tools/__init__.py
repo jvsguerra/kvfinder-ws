@@ -968,7 +968,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # ligand
         if self.ligand_adjustment.isChecked():
             if self.ligand.currentText() != '':
-                parameters['files']['pdb_ligand'] = self.ligand.currentText()
+                parameters['files']['ligand'] = self.ligand.currentText()
             else:
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.critical(self, "Error", "Select an ligand PDB!")
