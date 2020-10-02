@@ -96,7 +96,7 @@ def __init_plugin__(app=None):
     Add an entry to the PyMOL "Plugin" menu
     '''
     from pymol.plugins import addmenuitemqt
-    addmenuitemqt('KVFinder-web Tools', run_plugin_gui)
+    addmenuitemqt('PyMOL KVFinder-web Tools', run_plugin_gui)
 
 
 def run_plugin_gui():
@@ -231,8 +231,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
 
-        if verbosity in [1, 3]:
-            print('[==> Submitting job to KVFinder-web server ...')
+        print('\n[==> Submitting job to KVFinder-web server ...')
         
         # Create job
         parameters = self.create_parameters()
@@ -270,7 +269,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
             reply = json.loads(str(self.reply.readAll(), 'utf-8'))
 
             # Save job id
-            # job_id = reply['id']
             self.job.id = reply['id']
 
             # Results not available
@@ -289,6 +287,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 # Save job file
                 self.job.status = 'queued'
                 self.job.save(self.job.id)
+                print(f'> Job ID: {self.job.id}')
+
+                # Add Job ID to Results tab
+                self.available_jobs.addItem(self.job.id)
+                self.available_jobs.setCurrentText(self.job.id)
                 
             # Job already sent to KVFinder-web server
             else:
@@ -320,7 +323,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
                     self.job.save(self.job.id)
 
                     # Add Job ID to Results tab
-                    self.available_jobs.addItem(self.job.id)
+                    if self.job.id in [self.available_jobs.itemText(i) for i in range(self.available_jobs.count())]:
+                        self.available_jobs.addItem(self.job.id)
                     self.available_jobs.setCurrentText(self.job.id)
 
                     # Show ID
@@ -1027,14 +1031,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         # Get box parameters
         if self.box_adjustment.isChecked():
-            min_x = self.min_x_set.value()
-            max_x = self.max_x_set.value()
-            min_y = self.min_y_set.value()
-            max_y = self.max_y_set.value()
-            min_z = self.min_z_set.value()
-            max_z = self.max_z_set.value()
-            angle1 = self.angle1_set.value()
-            angle2 = self.angle2_set.value()
+            min_x = self.min_x_set
+            max_x = self.max_x_set
+            min_y = self.min_y_set
+            max_y = self.max_y_set
+            min_z = self.min_z_set
+            max_z = self.max_z_set
+            angle1 = self.angle1_set
+            angle2 = self.angle2_set
         else:
             min_x = 0.0
             max_x = 0.0
@@ -1274,7 +1278,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         # Check if results file exist
         if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
-            print(f"> Loading results from: {self.vis_results_file_entry.text()}\n")
+            print(f"> Loading results from: {self.vis_results_file_entry.text()}")
         else:
             from PyQt5.QtWidgets import QMessageBox
             error_msg = QMessageBox.critical(self, "Error", "Results file cannot be opened! Check results file path.")
