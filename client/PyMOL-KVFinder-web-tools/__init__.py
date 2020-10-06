@@ -38,6 +38,9 @@ dialog = None
 # Days until job expire                  #
 days_job_expire = 1                      #
                                          #
+# Data limit                             #
+data_limit = '1 Mb'                      #
+                                         #
 # Timers (msec)                          #
 time_restart_job_checks = 60000          #
 time_server_down = 60000                 #
@@ -236,16 +239,16 @@ class PyMOLKVFinderWebTools(QMainWindow):
     def run(self) -> None:
         from PyQt5 import QtNetwork
         from PyQt5.QtCore import QUrl, QJsonDocument
-
-        print('\n[==> Submitting job to KVFinder-web server ...')
-        
+      
         # Create job
         parameters = self.create_parameters()
         if type(parameters) is dict:
             self.job = Job(parameters)
         else:
             return
-        
+
+        print('\n[==> Submitting job to KVFinder-web server ...')
+
         # Post request
         try:
             # Prepare request
@@ -353,7 +356,37 @@ class PyMOLKVFinderWebTools(QMainWindow):
                         status
                         )
                     message.exec_()
-        
+
+        elif er == QtNetwork.QNetworkReply.ConnectionRefusedError:
+            from PyQt5.QtWidgets import QMessageBox
+            
+            # Set server status in GUI
+            self.server_down()
+            
+            # Message to user
+            if verbosity in [1, 3]:
+                print("\n\033[93mWarning:\033[0m KVFinder-web server is Offline! Try again later!\n")
+            message = QMessageBox.critical(
+                self, 
+                "Job Submission", 
+                "KVFinder-web server is Offline!\n\nTry again later!"
+                )            
+
+        elif er == QtNetwork.QNetworkReply.UnknownContentError:
+            from PyQt5.QtWidgets import QMessageBox
+            
+            # Set server status in GUI
+            self.server_up()
+            
+            # Message to user
+            if verbosity in [1, 3]:
+                print(f"\n\033[91mError:\033[0mJob exceedes the maximum payload of {data_limit} on KVFinder-web server!\n")
+            message = QMessageBox.critical(
+                self, 
+                "Job Submission", 
+                f"Job exceedes the maximum payload of {data_limit} on KVFinder-web server!"
+                )       
+
         else:
             print("Error occurred: ", er)
             print(self.reply.errorString())
