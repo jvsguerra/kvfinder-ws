@@ -1,3 +1,4 @@
+MODEL        1
 HETATM    1  C5' ADN E 351      11.087   9.790   2.052  1.00 21.76           C  
 HETATM    2  O5' ADN E 351      11.545   8.520   1.545  1.00 76.63           O  
 HETATM    3  C4' ADN E 351      10.688   9.680   3.523  1.00 14.36           C  
@@ -175,7 +176,8 @@ ATOM    174  OD1 ASP I  24      25.984   8.415 -10.483  1.00 98.28           O
 ATOM    175  OD2 ASP I  24      26.468   9.994  -8.960  1.00 94.02           O1-
 ATOM    176  OXT ASP I  24      28.624   5.684  -7.133  1.00100.00           O1-
 TER   
-CONECT    1    3    2
+ENDMDL
+CONECT    1    2    3
 CONECT    2    1
 CONECT    3    1    4    5
 CONECT    4    3    9
@@ -189,7 +191,7 @@ CONECT   11   10   12
 CONECT   12   11   13
 CONECT   13   12   14   19
 CONECT   14   13   15   17
-CONECT   15   14   10   16
+CONECT   15   10   14   16
 CONECT   16   15
 CONECT   17   14   18
 CONECT   18   17   19
