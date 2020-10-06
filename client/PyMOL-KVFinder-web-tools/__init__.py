@@ -5,7 +5,8 @@
 #    This is the KVFinder-web server client for PyMOL. It was developed using Qt    #
 #    interface and Python.                                                          #
 #                                                                                   #
-#    PyMOL KVFinder Web Tools is free software: you can redistribute it and/or      #    modifyit under the terms of the GNU General Public License as published        #
+#    PyMOL KVFinder Web Tools is free software: you can redistribute it and/or      #    
+#    modify it under the terms of the GNU General Public License as published       #
 #    by the Free Software Foundation, either version 3 of the License, or           #
 #    (at your option) any later version.                                            #
 #                                                                                   #
@@ -293,7 +294,8 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 print(f'> Job ID: {self.job.id}')
 
                 # Add Job ID to Results tab
-                self.available_jobs.addItem(self.job.id)
+                self.available_jobs.clear()
+                self.available_jobs.addItem(_get_jobs())
                 self.available_jobs.setCurrentText(self.job.id)
                 
             # Job already sent to KVFinder-web server
@@ -529,18 +531,25 @@ class PyMOLKVFinderWebTools(QMainWindow):
         Callback for the "Restore Default Values" button
         """
         from pymol import cmd
-        from PyQt5.QtWidgets import QMessageBox
+        from PyQt5.QtWidgets import QMessageBox, QCheckBox
 
         # Restore Results Tab
         if not is_startup:
-            reply = QMessageBox.question(self, "Restore Values", "Also restore Results Visualization tab?", QMessageBox.Yes, QMessageBox.No)
-            if reply == QMessageBox.Yes:
+            reply = QMessageBox(self)
+            reply.setText("Also restore Results Visualization tab?")
+            reply.setWindowTitle("Restore Values")
+            reply.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
+            reply.setIcon(QMessageBox.Information)
+            reply.checkbox = QCheckBox("Also remove input and ligand PDBs?")
+            reply.layout = reply.layout()
+            reply.layout.addWidget(reply.checkbox, 1, 2)
+            if reply.exec_() == QMessageBox.Yes:
                 # Remove cavities, residues and pdbs (input, ligand, cavity)
                 cmd.delete("cavities")
                 cmd.delete("residues")
-                if self.input_pdb:
+                if self.input_pdb and reply.checkbox.isChecked():
                     cmd.delete(self.input_pdb)
-                if self.ligand_pdb:
+                if self.ligand_pdb and reply.checkbox.isChecked():
                     cmd.delete(self.ligand_pdb)
                 if self.cavity_pdb:
                     cmd.delete(self.cavity_pdb)
