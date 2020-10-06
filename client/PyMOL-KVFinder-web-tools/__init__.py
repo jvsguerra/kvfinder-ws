@@ -3,7 +3,8 @@
 
 #####################################################################################
 #    This is the KVFinder-web server client for PyMOL. It was developed using Qt    #
-#    interface and Python.                                                          #
+#    interface and Python. Changes in this file are not advised, as it controls     #
+#    all interactions with KVFinder-web server                                      #
 #                                                                                   #
 #    PyMOL KVFinder Web Tools is free software: you can redistribute it and/or      #    
 #    modify it under the terms of the GNU General Public License as published       #
@@ -19,6 +20,7 @@
 #    PyMOL KVFinder Web Tools.  If not, see <http://www.gnu.org/licenses/>.         #
 #                                                                                   #
 #####################################################################################
+
 
 from __future__ import absolute_import, print_function, annotations
 
