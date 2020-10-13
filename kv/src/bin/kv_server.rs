@@ -4,7 +4,8 @@ use actix_web::{HttpServer, App, web};
 fn main() {
     println!("KVFinder webserver started");
 
-    kv::webserver::create_ocypod_queue("kvfinder", "12m", "6m", 0);
+    // job timeout 30 minutes, expires after 1 day
+    kv::webserver::create_ocypod_queue("kvfinder", "30m", "1d", 0);
 
     HttpServer::new(|| {
         App::new()
