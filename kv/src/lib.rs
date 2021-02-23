@@ -86,11 +86,34 @@ mod kv {
         z: f64,
     }
 
+    struct PdbBoundaries {
+        x_min: f64,
+        x_max: f64,
+        y_min: f64,
+        y_max: f64,
+        z_min: f64,
+        z_max: f64,
+    }
+
     #[derive(Serialize, Deserialize, Debug)]
     pub struct Input {
         settings: KVSettings,
         pdb: Vec<String>,
         pdb_ligand: Option<Vec<String>>,
+    }
+
+    impl Input {
+        fn get_pdb_boundaries(&self) -> PdbBoundaries {
+            //TODO
+            PdbBoundaries {
+                x_min : 0.0,
+                x_max : 0.0,
+                y_min : 0.0,
+                y_max : 0.0,
+                z_min : 0.0,
+                z_max : 0.0,
+            }
+        }
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -332,7 +355,6 @@ mod kv {
             Ok(())
         }
 
-        
         pub fn ask(id: web::Path<String>) -> impl Responder {
             let tag_id = id.into_inner();
             let job = get_job(tag_id);
