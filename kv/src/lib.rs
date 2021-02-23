@@ -98,6 +98,7 @@ mod kv {
         pdb_kv: String,
         report: String,
         log: String,
+        msg: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -116,7 +117,7 @@ mod kv {
         use serde::{Deserialize, Serialize};
         use std::path::Path;
         use std::fs::{File,create_dir};
-        use super::Input;
+        use super::{Input, Output};
 
         #[derive(Serialize, Deserialize, Debug)]
         pub struct JobInput {
@@ -127,7 +128,7 @@ mod kv {
         #[derive(Serialize, Deserialize, Debug, Clone)]
         struct JobOutput {
             status: String,
-            output: super::Output,
+            output: Output,
         }
 
         pub struct Config {
@@ -141,7 +142,7 @@ mod kv {
                 Ok(())
             }
     
-            fn run(&self, config: &Config) -> Result<super::Output, io::Error> {
+            fn run(&self, config: &Config) -> Result<Output, io::Error> {
                 let kvfinder = Command::new(format!("{}/parKVFinder", config.kv_path))
                                     .current_dir(format!("{}/{}", config.job_path, self.id))
                                     .arg("-p")
@@ -150,10 +151,11 @@ mod kv {
                                     .expect("failed to execute KVFinder process");
                 println!("process exited with: {}", kvfinder);
                 if kvfinder.success() {
-                    let output = super::Output { 
+                    let output = Output { 
                         pdb_kv:  fs::read_to_string(format!("{}/{}/KV_Files/KVFinderWeb/KVFinderWeb.KVFinder.output.pdb", config.job_path, self.id))?,
                         report:  fs::read_to_string(format!("{}/{}/KV_Files/KVFinderWeb/KVFinderWeb.KVFinder.results.toml", config.job_path, self.id))?, 
                         log: fs::read_to_string(format!("{}/{}/KV_Files/KVFinder.log", config.job_path, self.id))?, 
+                        msg: String::new(),
                     };
                     println!("KVFinder OK");
                     return Ok(output);
@@ -167,11 +169,8 @@ mod kv {
             fn save(&self, id: u32, config: &Config) -> Result<(), io::Error> {
                 let dir = format!("{}/{}", config.job_path, id);
                 match create_dir(&dir) {
-                    //Err(err) => panic!(err),
                     Err(err) => Err(err),
                     Ok(_) => {
-                        //let settings_path = format!("{}/settings.toml", dir);
-                        //let pdb_path = format!("{}/protein.pdb", dir);
                         self.save_parameters(&dir, &config)?;
                         self.save_pdb(&dir)?;
                         if let Some(_) = self.pdb_ligand {
@@ -229,19 +228,19 @@ mod kv {
             Ok(j)
         }
 
-        pub fn process(job: JobInput, config: &Config) -> Result<super::Output, io::Error> {
+        pub fn process(job: JobInput, config: &Config) -> Result<Output, io::Error> {
             job.save(&config)?;
             let output = job.run(&config); 
             output
         }
 
-        pub fn submit_result(id: u32, output: super::Output) -> Result<u32, reqwest::Error> {
+        pub fn submit_result(id: u32, output: Output) -> Result<u32, reqwest::Error> {
             let client = reqwest::Client::new();
             // let url = format!("http://0.0.0.0:8023/job/{}", id);
             let url = format!("http://ocypod:8023/job/{}", id);
             let data = JobOutput {
                 status: String::from("completed"),
-                output: output,
+                output,
             };
             let _result = client.patch(url.as_str())
                 .json(&data)
@@ -257,13 +256,14 @@ mod kv {
         use serde_json::json;
         use fasthash::city;
         use serde::{Deserialize, Serialize};
+        use super::{Input, Output, Data};
 
         #[derive(Serialize, Deserialize)]
         struct Job {
             #[serde(default)]
             id: String,     // this id is the same as tag_id (NOT queue_id)
             status: String,
-            output: Option<super::Output>,
+            output: Option<Output>,
             created_at: String,
             started_at: Option<String>,
             ended_at: Option<String>, 
@@ -288,10 +288,10 @@ mod kv {
             let client = reqwest::Client::new();
             let queue_url = format!("http://ocypod:8023/queue/{}", queue_name);
             let queue_config = QueueConfig { timeout, expires_after, retries };
-            let res = client.put(&queue_url)
+            let _response = client.put(&queue_url)
                 .json(&queue_config)
                 .send();
-            // match res {
+            // match _response {
             //     Ok(_) => HttpResponse::Ok().json(json!({"id":data.tags[0]})),
             //     Err(e) => HttpResponse::InternalServerError().body(format!("{:?}", e)),
             // }
@@ -328,6 +328,11 @@ mod kv {
             }
         }
         
+        fn check(input: &Input) -> Result<(), String> {
+            Ok(())
+        }
+
+        
         pub fn ask(id: web::Path<String>) -> impl Responder {
             let tag_id = id.into_inner();
             let job = get_job(tag_id);
@@ -338,21 +343,24 @@ mod kv {
             }
         }
 
-        pub fn create(job_input: web::Json<super::Input>) -> impl Responder {
+        pub fn create(job_input: web::Json<Input>) -> impl Responder {
             // json input values to inp
-            let inp = job_input.into_inner();
-            let data = super::Data {
+            let input = job_input.into_inner();
+            if let Err(e) = check(&input) {
+                return HttpResponse::BadRequest().body(format!("{:?}", e));
+            }
+            let data = Data {
                 // create a tag using function hash64 applied to input (unique value per input)
-                tags: [city::hash64(serde_json::to_string(&inp).unwrap()).to_string()],
-                input: inp,
+                tags: [city::hash64(serde_json::to_string(&input).unwrap()).to_string()],
+                input,
             };
             let create_job = || {
                 let client = reqwest::Client::new();
                 // let res = client.post("http://0.0.0.0:8023/queue/kvfinder/job")
-                let res = client.post("http://ocypod:8023/queue/kvfinder/job")
+                let response = client.post("http://ocypod:8023/queue/kvfinder/job")
                     .json(&data)
                     .send();
-                match res {
+                match response {
                     Ok(_) => HttpResponse::Ok().json(json!({"id":data.tags[0]})),
                     Err(e) => HttpResponse::InternalServerError().body(format!("{:?}", e)),
                 }
