@@ -1,7 +1,7 @@
 [package]
 name = "kv"
-version = "0.1.0"
-authors = ["jgcarvalho <Jose Geraldo>"]
+version = "0.2.0"
+authors = ["jgcarvalho <Jose Geraldo>, jvsguerra <Joao Vitor>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
