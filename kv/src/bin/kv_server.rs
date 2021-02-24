@@ -1,5 +1,11 @@
 use kv;
-use actix_web::{HttpServer, App, web};
+use actix_web::{HttpServer, App, web, error, HttpResponse, HttpRequest};
+
+fn json_error_handler(err: error::JsonPayloadError, _req: &HttpRequest) -> error::Error {
+    let msg = String::from("Please update your plugin");
+    let resp = HttpResponse::BadRequest().body(msg);
+    error::InternalError::from_response(err, resp).into()
+}
 
 fn main() {
     println!("KVFinder webserver started");
@@ -9,7 +15,7 @@ fn main() {
 
     HttpServer::new(|| {
         App::new()
-            .data(web::JsonConfig::default().limit(1_000_000))
+            .data(web::JsonConfig::default().limit(1_000_000).error_handler(json_error_handler))
             .route("/", web::get().to(kv::webserver::hello))
             .route("/{id}", web::get().to(kv::webserver::ask))
             .route("/create", web::post().to(kv::webserver::create)) 
