@@ -121,7 +121,6 @@ mod kv {
         pdb_kv: String,
         report: String,
         log: String,
-        msg: String,
     }
 
     #[derive(Serialize, Deserialize)]
@@ -178,7 +177,6 @@ mod kv {
                         pdb_kv:  fs::read_to_string(format!("{}/{}/KV_Files/KVFinderWeb/KVFinderWeb.KVFinder.output.pdb", config.job_path, self.id))?,
                         report:  fs::read_to_string(format!("{}/{}/KV_Files/KVFinderWeb/KVFinderWeb.KVFinder.results.toml", config.job_path, self.id))?, 
                         log: fs::read_to_string(format!("{}/{}/KV_Files/KVFinder.log", config.job_path, self.id))?, 
-                        msg: String::new(),
                     };
                     println!("KVFinder OK");
                     return Ok(output);
@@ -352,6 +350,7 @@ mod kv {
         }
         
         fn check(input: &Input) -> Result<(), String> {
+            //TODO input validation
             Ok(())
         }
 
@@ -378,7 +377,6 @@ mod kv {
             };
             let create_job = || {
                 let client = reqwest::Client::new();
-                // let res = client.post("http://0.0.0.0:8023/queue/kvfinder/job")
                 let response = client.post("http://ocypod:8023/queue/kvfinder/job")
                     .json(&data)
                     .send();
