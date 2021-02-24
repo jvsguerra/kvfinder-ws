@@ -36,6 +36,10 @@ worker = None
 
 
 ########## Relevant information ##########
+# Server (KVFinder-web server)           #
+# This variable defines the url of the   #
+# KVFinder-web server. Change this       #
+# variable to the server you are using   #
 # Server                                 #
 server = "http://localhost"              #
 #                                        #
@@ -2375,16 +2379,16 @@ class Form(QDialog):
 class Message(QDialog):
 
 
-    def __init__(self, msg: str, job_id: str, status: Optional[str]=None):
+    def __init__(self, msg: str, job_id: str, status: Optional[str]=None, notification: Optional[str]=None):
         super(Message, self).__init__()
         # Initialize Message GUI
-        self.initialize_gui(msg, job_id, status)
+        self.initialize_gui(msg, job_id, status, notification)
 
         # Set Values in Message GUI
-        self.set_values(msg, job_id, status)
+        self.set_values(msg, job_id, status, notification)
 
 
-    def set_values(self, msg, job_id, status) -> None:
+    def set_values(self, msg, job_id, status, notification) -> None:
         # Message
         self.msg.setText(msg)
 
@@ -2398,10 +2402,14 @@ class Message(QDialog):
                 self.status.setStyleSheet('color: blue;')
             elif status == 'completed':
                 self.status.setStyleSheet('color: green;')
+        
+        # Notification
+        if notification:
+            self.notification.setText(notification)
 
 
-    def initialize_gui(self, msg, job_id, status) -> None:
-        from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QSpacerItem, QSizePolicy, QDialogButtonBox, QStyle
+    def initialize_gui(self, msg, job_id, status, notification) -> None:
+        from PyQt5.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QTextEdit, QSpacerItem, QSizePolicy, QDialogButtonBox, QStyle
         from PyQt5.QtCore import Qt
         from PyQt5.QtGui import QFont, QIcon
         
@@ -2410,7 +2418,7 @@ class Message(QDialog):
 
         # Set alignment of QDialog
         self.vframe = QVBoxLayout(self)
-        self.setFixedSize(425, 150)
+        self.setFixedSize(425, 200)
 
         # Create message layout
         self.hframe1 = QHBoxLayout()
@@ -2470,6 +2478,18 @@ class Message(QDialog):
             self.hframe3.addWidget(self.status)
             self.hframe3.setAlignment(Qt.AlignCenter)
 
+        # Create Notification layout
+        self.hframe4 = QHBoxLayout()
+        if notification:
+            # Notification entry
+            self.notification = QTextEdit(self)
+            self.notification.setSizePolicy(QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding))
+            self.notification.setReadOnly(True)
+            self.notification.setAlignment(Qt.AlignCenter)
+            # add to layout
+            self.hframe4.addWidget(self.notification)
+            self.hframe4.setAlignment(Qt.AlignCenter)
+
         # Vertical spacer
         self.vspacer2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -2484,6 +2504,7 @@ class Message(QDialog):
         self.vframe.addItem(self.vspacer1)
         self.vframe.addLayout(self.hframe2)
         self.vframe.addLayout(self.hframe3)
+        self.vframe.addLayout(self.hframe4)
         self.vframe.addItem(self.vspacer2)
         self.vframe.addWidget(self.buttonBox)
 
