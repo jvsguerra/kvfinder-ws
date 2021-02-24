@@ -94,6 +94,7 @@ class KVClient:
             return True
         else:
             print("Debug:", r)
+            print(r.text)
             return False
 
     def _get_results(self, kv_job) -> Optional[Dict[str, Any]]:
