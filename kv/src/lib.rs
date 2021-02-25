@@ -1,4 +1,4 @@
-mod kv {
+mod kv { 
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Debug)]
@@ -42,6 +42,7 @@ mod kv {
         Low,
         Medium,
         High,
+        Off,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -103,6 +104,79 @@ mod kv {
     }
 
     impl Input {
+
+        fn check(&self) -> Result<(), &'static str> {
+            // Compare Whole protein and Box modes
+            match (self.settings.modes.whole_protein_mode, self.settings.modes.box_mode) {
+                (true, true) => return Err("Invalid parameters file! Whole protein and box modes cannot both be true!"),
+                (false, false) => return Err("Invalid parameters file! Whole protein and box modes cannot both be false!"),
+                _ => (),
+            };
+            // Compare resolution mode
+            match self.settings.modes.resolution_mode {
+                KVSResolution::Low => (),
+                KVSResolution::Off => if self.settings.step_size.step_size != 0.6 {
+                    return Err("Invalid parameters file! Step size is restricted to 0.6 A on this web service!");
+                },
+                _ => return Err("Invalid parameters file! Resolution mode is restricted to Low option on this web service!"),
+            };
+            // Probe In
+            if self.settings.probes.probe_in < 0.0 && self.settings.probes.probe_in > 5.0 {
+                return Err("Invalid parameters file! Probe In must be between 0 and 5!");
+            }
+            // Probe Out
+            if self.settings.probes.probe_out < 0.0 && self.settings.probes.probe_out > 50.0 {
+                return Err("Invalid parameters file! Probe Out must be between 0 and 50!");
+            }
+            // Compare probes
+            if self.settings.probes.probe_out < self.settings.probes.probe_in {
+                return Err("Invalid parameters file! Probe Out must be greater than Probe In!");
+            }
+            // Removal distance
+            if self.settings.cutoffs.removal_distance < 0.0 && self.settings.cutoffs.removal_distance > 10.0 {
+                return Err("Invalid parameters file! Removal distance must be between 0 and 50!");
+            }
+            // Volume Cutoff
+            if self.settings.cutoffs.volume_cutoff < 0.0 && self.settings.cutoffs.volume_cutoff > 1000000000.0 {
+                return Err("Invalid parameters file! Volume cutoff must be between 0 and 1,000,000,000!");
+            }    
+            // Cavity representation
+            match self.settings.modes.kvp_mode {
+                true => return Err("Invalid parameters file! Cavity Representation (kvp_mode) must be false on this webservice!"),
+                false => (),
+            };
+            // Ligand pdb
+            match self.pdb_ligand {
+                Some(_) => match self.settings.modes.ligand_mode {
+                    true => (),
+                    false => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
+                },
+                None => match self.settings.modes.ligand_mode {
+                    true => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
+                    false => (),
+                }
+            };
+            // Ligand mode
+            match self.settings.modes.ligand_mode {
+                true => match self.pdb_ligand {
+                    Some(_) => (),
+                    None => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
+                },
+                false => match self.pdb_ligand {
+                    Some(_) => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
+                    None => (),
+                },
+            }
+            // Ligand Cutoff
+            if self.settings.cutoffs.ligand_cutoff <= 0.0 && self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
+                return Err("Invalid parameters file! Ligand cutoff must be between 0 and 1,000,000,000!");
+            }
+            // Box inside pdb grid
+            // TODO
+            // Return Ok (All parameters are acceptable)
+            Ok(())
+        }
+
         fn get_pdb_boundaries(&self) -> PdbBoundaries {
             //TODO
             PdbBoundaries {
@@ -142,7 +216,6 @@ mod kv {
         use super::{Input, Output};
 
         #[derive(Serialize, Deserialize, Debug)]
-        #[serde(deny_unknown_fields)]
         pub struct JobInput {
             pub id: u32,
             input: Input,
@@ -350,11 +423,6 @@ mod kv {
             }
         }
         
-        fn check(input: &Input) -> Result<(), String> {
-            //TODO input validation
-            Ok(())
-        }
-
         pub fn ask(id: web::Path<String>) -> impl Responder {
             let tag_id = id.into_inner();
             let job = get_job(tag_id);
@@ -368,7 +436,7 @@ mod kv {
         pub fn create(job_input: web::Json<Input>) -> impl Responder {
             // json input values to inp
             let input = job_input.into_inner();
-            if let Err(e) = check(&input) {
+            if let Err(e) = &input.check() {
                 return HttpResponse::BadRequest().body(format!("{:?}", e));
             }
             let data = Data {
