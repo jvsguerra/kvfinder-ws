@@ -190,19 +190,19 @@ mod kv {
                 let pdb_boundaries = self.get_pdb_boundaries();
                 // P1
                 if (self.settings.internalbox.p1.x < pdb_boundaries.x_min || self.settings.internalbox.p1.x > pdb_boundaries.x_max) || (self.settings.internalbox.p1.y < pdb_boundaries.y_min || self.settings.internalbox.p1.y > pdb_boundaries.y_max) || (self.settings.internalbox.p1.z < pdb_boundaries.z_min || self.settings.internalbox.p1.z > pdb_boundaries.z_max) {
-                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                    return Err("Invalid parameters file! Custom box too big for target biomolecule grid!")
                 }
                 // P2
                 if (self.settings.internalbox.p2.x < pdb_boundaries.x_min || self.settings.internalbox.p2.x > pdb_boundaries.x_max) || (self.settings.internalbox.p2.y < pdb_boundaries.y_min || self.settings.internalbox.p2.y > pdb_boundaries.y_max) || (self.settings.internalbox.p2.z < pdb_boundaries.z_min || self.settings.internalbox.p2.z > pdb_boundaries.z_max) {
-                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                    return Err("Invalid parameters file! Custom box too big for target biomolecule grid!")
                 }
                 // P3
                 if (self.settings.internalbox.p3.x < pdb_boundaries.x_min || self.settings.internalbox.p3.x > pdb_boundaries.x_max) || (self.settings.internalbox.p3.y < pdb_boundaries.y_min || self.settings.internalbox.p3.y > pdb_boundaries.y_max) || (self.settings.internalbox.p3.z < pdb_boundaries.z_min || self.settings.internalbox.p3.z > pdb_boundaries.z_max) {
-                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                    return Err("Invalid parameters file! Custom box too big for target biomolecule grid!")
                 }
                 // P4
                 if (self.settings.internalbox.p4.x < pdb_boundaries.x_min || self.settings.internalbox.p4.x > xmax) || (self.settings.internalbox.p4.y < pdb_boundaries.y_min || self.settings.internalbox.p4.y > ymax) || (self.settings.internalbox.p4.z < pdb_boundaries.z_min || self.settings.internalbox.p4.z > zmax) {
-                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                    return Err("Invalid parameters file! Custom box too big for target biomolecule grid!")
                 }
             }
             // Return Ok (All parameters are acceptable)
