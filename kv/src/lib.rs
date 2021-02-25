@@ -142,6 +142,7 @@ mod kv {
         use super::{Input, Output};
 
         #[derive(Serialize, Deserialize, Debug)]
+        #[serde(deny_unknown_fields)]
         pub struct JobInput {
             pub id: u32,
             input: Input,
