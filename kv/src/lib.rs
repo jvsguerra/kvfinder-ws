@@ -138,11 +138,11 @@ mod kv {
             }
             // Removal distance
             if self.settings.cutoffs.removal_distance < 0.0 || self.settings.cutoffs.removal_distance > 10.0 {
-                return Err("Invalid parameters file! Removal distance must be between 0 and 50!");
+                return Err("Invalid parameters file! Removal distance must be between 0 and 10!");
             }
             // Volume Cutoff
-            if self.settings.cutoffs.volume_cutoff < 0.0 || self.settings.cutoffs.volume_cutoff > 1000000000.0 {
-                return Err("Invalid parameters file! Volume cutoff must be between 0 and 1,000,000,000!");
+            if self.settings.cutoffs.volume_cutoff < 0.0 {
+                return Err("Invalid parameters file! Volume cutoff must be greater than 0!");
             }    
             // Cavity representation
             if self.settings.modes.kvp_mode {
@@ -155,9 +155,9 @@ mod kv {
                     return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!");
             }
             // Ligand Cutoff
-            if self.settings.cutoffs.ligand_cutoff <= 0.0 || self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
-                return Err("Invalid parameters file! Ligand cutoff must be between 0 and 1,000,000,000!");
-            }            
+            if self.settings.cutoffs.ligand_cutoff <= 0.0 {
+                return Err("Invalid parameters file! Ligand cutoff must be greater than 0!");
+            }
             // Box coordinates
             if self.settings.modes.box_mode {
                 // 1) box[internal] > box[visible]
@@ -504,7 +504,7 @@ mod kv {
         pub fn create(job_input: web::Json<Input>) -> impl Responder {
             // json input values to inp
             let input = job_input.into_inner();
-            if let Err(e) = input.check() {
+            if let Err(e) = &input.check() {
                 return HttpResponse::BadRequest().body(format!("{:?}", e));
             }
             let data = Data {
