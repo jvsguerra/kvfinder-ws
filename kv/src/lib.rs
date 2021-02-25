@@ -39,7 +39,7 @@ mod kv {
         ligand_mode: bool,
     }
 
-    #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
     #[serde(deny_unknown_fields)]
     enum KVSResolution {
         Low,
@@ -115,27 +115,21 @@ mod kv {
 
     impl Input {
 
-        fn check(&self) -> Result<(), &'static str> {
+        fn check(&self) -> Result<(), &str> {
             // Compare Whole protein and Box modes
-            match (self.settings.modes.whole_protein_mode, self.settings.modes.box_mode) {
-                (true, true) => return Err("Invalid parameters file! Whole protein and box modes cannot both be true!"),
-                (false, false) => return Err("Invalid parameters file! Whole protein and box modes cannot both be false!"),
-                _ => (),
-            };
+            if self.settings.modes.whole_protein_mode == self.settings.modes.box_mode {
+                return Err("Invalid parameters file! Whole protein and box modes cannot be equal!");
+            }
             // Compare resolution mode
-            match self.settings.modes.resolution_mode {
-                KVSResolution::Low => (),
-                KVSResolution::Off => if self.settings.step_size.step_size != 0.6 {
-                    return Err("Invalid parameters file! Step size is restricted to 0.6 A on this web service!");
-                },
-                _ => return Err("Invalid parameters file! Resolution mode is restricted to Low option on this web service!"),
-            };
+            if self.settings.modes.resolution_mode != KVSResolution::Low {
+               return Err("Invalid parameters file! Resolution mode is restricted to Low option on this web service!");
+            }
             // Probe In
-            if self.settings.probes.probe_in < 0.0 && self.settings.probes.probe_in > 5.0 {
+            if self.settings.probes.probe_in < 0.0 || self.settings.probes.probe_in > 5.0 {
                 return Err("Invalid parameters file! Probe In must be between 0 and 5!");
             }
             // Probe Out
-            if self.settings.probes.probe_out < 0.0 && self.settings.probes.probe_out > 50.0 {
+            if self.settings.probes.probe_out < 0.0 || self.settings.probes.probe_out > 50.0 {
                 return Err("Invalid parameters file! Probe Out must be between 0 and 50!");
             }
             // Compare probes
@@ -143,42 +137,25 @@ mod kv {
                 return Err("Invalid parameters file! Probe Out must be greater than Probe In!");
             }
             // Removal distance
-            if self.settings.cutoffs.removal_distance < 0.0 && self.settings.cutoffs.removal_distance > 10.0 {
+            if self.settings.cutoffs.removal_distance < 0.0 || self.settings.cutoffs.removal_distance > 10.0 {
                 return Err("Invalid parameters file! Removal distance must be between 0 and 50!");
             }
             // Volume Cutoff
-            if self.settings.cutoffs.volume_cutoff < 0.0 && self.settings.cutoffs.volume_cutoff > 1000000000.0 {
+            if self.settings.cutoffs.volume_cutoff < 0.0 || self.settings.cutoffs.volume_cutoff > 1000000000.0 {
                 return Err("Invalid parameters file! Volume cutoff must be between 0 and 1,000,000,000!");
             }    
             // Cavity representation
-            match self.settings.modes.kvp_mode {
-                true => return Err("Invalid parameters file! Cavity Representation (kvp_mode) must be false on this webservice!"),
-                false => (),
-            };
-            // Ligand pdb
-            match self.pdb_ligand {
-                Some(_) => match self.settings.modes.ligand_mode {
-                    true => (),
-                    false => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
-                },
-                None => match self.settings.modes.ligand_mode {
-                    true => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
-                    false => (),
-                }
-            };
-            // Ligand mode
-            match self.settings.modes.ligand_mode {
-                true => match self.pdb_ligand {
-                    Some(_) => (),
-                    None => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
-                },
-                false => match self.pdb_ligand {
-                    Some(_) => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
-                    None => (),
-                },
+            if self.settings.modes.kvp_mode {
+                return Err("Invalid parameters file! Cavity Representation (kvp_mode) must be false on this webservice!");
+            }
+            // Ligand mode and pdb
+            if self.settings.modes.ligand_mode && self.pdb_ligand == None {
+                 return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!");
+            } else if !self.settings.modes.ligand_mode && self.pdb_ligand != None {
+                    return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!");
             }
             // Ligand Cutoff
-            if self.settings.cutoffs.ligand_cutoff <= 0.0 && self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
+            if self.settings.cutoffs.ligand_cutoff <= 0.0 || self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
                 return Err("Invalid parameters file! Ligand cutoff must be between 0 and 1,000,000,000!");
             }
             // Box inside pdb grid
