@@ -77,7 +77,7 @@ class KVJob:
         }
 
 class KVClient:
-    def __init__(self, server: str, port: str):
+    def __init__(self, server: str, port="80"):
         self.server = f"{server}:{port}"
 
     def run(self, kv_job: KVJob):
