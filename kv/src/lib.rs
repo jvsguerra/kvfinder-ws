@@ -18,6 +18,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSettings {
         modes: KVSModes,
         step_size: KVSStepSize,
@@ -28,6 +29,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSModes {
         whole_protein_mode: bool,
         box_mode: bool,
@@ -38,6 +40,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     enum KVSResolution {
         Low,
         Medium,
@@ -45,17 +48,20 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSStepSize {
         step_size: f64,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSProbes {
         probe_in: f64,
         probe_out: f64,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSCutoffs {
         volume_cutoff: f64,
         ligand_cutoff: f64,
@@ -63,6 +69,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSVisiblebox {
         p1: KVSBoxPoint,
         p2: KVSBoxPoint,
@@ -71,6 +78,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSInternalbox {
         p1: KVSBoxPoint,
         p2: KVSBoxPoint,
@@ -80,6 +88,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSBoxPoint {
         x: f64, 
         y: f64,
@@ -96,6 +105,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug)]
+    #[serde(deny_unknown_fields)]
     pub struct Input {
         settings: KVSettings,
         pdb: Vec<String>,
@@ -142,7 +152,6 @@ mod kv {
         use super::{Input, Output};
 
         #[derive(Serialize, Deserialize, Debug)]
-        #[serde(deny_unknown_fields)]
         pub struct JobInput {
             pub id: u32,
             input: Input,
