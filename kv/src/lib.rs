@@ -18,6 +18,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSettings {
         modes: KVSModes,
         step_size: KVSStepSize,
@@ -28,6 +29,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSModes {
         whole_protein_mode: bool,
         box_mode: bool,
@@ -37,7 +39,8 @@ mod kv {
         ligand_mode: bool,
     }
 
-    #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     enum KVSResolution {
         Low,
         Medium,
@@ -46,17 +49,20 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSStepSize {
         step_size: f64,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSProbes {
         probe_in: f64,
         probe_out: f64,
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSCutoffs {
         volume_cutoff: f64,
         ligand_cutoff: f64,
@@ -64,6 +70,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSVisiblebox {
         p1: KVSBoxPoint,
         p2: KVSBoxPoint,
@@ -72,6 +79,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSInternalbox {
         p1: KVSBoxPoint,
         p2: KVSBoxPoint,
@@ -81,6 +89,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug, Clone)]
+    #[serde(deny_unknown_fields)]
     struct KVSBoxPoint {
         x: f64, 
         y: f64,
@@ -97,6 +106,7 @@ mod kv {
     }
 
     #[derive(Serialize, Deserialize, Debug)]
+    #[serde(deny_unknown_fields)]
     pub struct Input {
         settings: KVSettings,
         pdb: Vec<String>,
@@ -105,27 +115,21 @@ mod kv {
 
     impl Input {
 
-        fn check(&self) -> Result<(), &'static str> {
+        fn check(&self) -> Result<(), &str> {
             // Compare Whole protein and Box modes
-            match (self.settings.modes.whole_protein_mode, self.settings.modes.box_mode) {
-                (true, true) => return Err("Invalid parameters file! Whole protein and box modes cannot both be true!"),
-                (false, false) => return Err("Invalid parameters file! Whole protein and box modes cannot both be false!"),
-                _ => (),
-            };
+            if self.settings.modes.whole_protein_mode == self.settings.modes.box_mode {
+                return Err("Invalid parameters file! Whole protein and box modes cannot be equal!");
+            }
             // Compare resolution mode
-            match self.settings.modes.resolution_mode {
-                KVSResolution::Low => (),
-                KVSResolution::Off => if self.settings.step_size.step_size != 0.6 {
-                    return Err("Invalid parameters file! Step size is restricted to 0.6 A on this web service!");
-                },
-                _ => return Err("Invalid parameters file! Resolution mode is restricted to Low option on this web service!"),
-            };
+            if self.settings.modes.resolution_mode != KVSResolution::Low {
+               return Err("Invalid parameters file! Resolution mode is restricted to Low option on this web service!");
+            }
             // Probe In
-            if self.settings.probes.probe_in < 0.0 && self.settings.probes.probe_in > 5.0 {
+            if self.settings.probes.probe_in < 0.0 || self.settings.probes.probe_in > 5.0 {
                 return Err("Invalid parameters file! Probe In must be between 0 and 5!");
             }
             // Probe Out
-            if self.settings.probes.probe_out < 0.0 && self.settings.probes.probe_out > 50.0 {
+            if self.settings.probes.probe_out < 0.0 || self.settings.probes.probe_out > 50.0 {
                 return Err("Invalid parameters file! Probe Out must be between 0 and 50!");
             }
             // Compare probes
@@ -133,59 +137,123 @@ mod kv {
                 return Err("Invalid parameters file! Probe Out must be greater than Probe In!");
             }
             // Removal distance
-            if self.settings.cutoffs.removal_distance < 0.0 && self.settings.cutoffs.removal_distance > 10.0 {
+            if self.settings.cutoffs.removal_distance < 0.0 || self.settings.cutoffs.removal_distance > 10.0 {
                 return Err("Invalid parameters file! Removal distance must be between 0 and 50!");
             }
             // Volume Cutoff
-            if self.settings.cutoffs.volume_cutoff < 0.0 && self.settings.cutoffs.volume_cutoff > 1000000000.0 {
+            if self.settings.cutoffs.volume_cutoff < 0.0 || self.settings.cutoffs.volume_cutoff > 1000000000.0 {
                 return Err("Invalid parameters file! Volume cutoff must be between 0 and 1,000,000,000!");
             }    
             // Cavity representation
-            match self.settings.modes.kvp_mode {
-                true => return Err("Invalid parameters file! Cavity Representation (kvp_mode) must be false on this webservice!"),
-                false => (),
-            };
-            // Ligand pdb
-            match self.pdb_ligand {
-                Some(_) => match self.settings.modes.ligand_mode {
-                    true => (),
-                    false => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
-                },
-                None => match self.settings.modes.ligand_mode {
-                    true => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
-                    false => (),
-                }
-            };
-            // Ligand mode
-            match self.settings.modes.ligand_mode {
-                true => match self.pdb_ligand {
-                    Some(_) => (),
-                    None => return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!"),
-                },
-                false => match self.pdb_ligand {
-                    Some(_) => return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!"),
-                    None => (),
-                },
+            if self.settings.modes.kvp_mode {
+                return Err("Invalid parameters file! Cavity Representation (kvp_mode) must be false on this webservice!");
+            }
+            // Ligand mode and pdb
+            if self.settings.modes.ligand_mode && self.pdb_ligand == None {
+                 return Err("Invalid parameters file! A ligand must be provided when Ligand mode is set to true!");
+            } else if !self.settings.modes.ligand_mode && self.pdb_ligand != None {
+                    return Err("Invalid parameters file! The Ligand mode must be set to true when providing a ligand!");
             }
             // Ligand Cutoff
-            if self.settings.cutoffs.ligand_cutoff <= 0.0 && self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
+            if self.settings.cutoffs.ligand_cutoff <= 0.0 || self.settings.cutoffs.ligand_cutoff > 1000000000.0 {
                 return Err("Invalid parameters file! Ligand cutoff must be between 0 and 1,000,000,000!");
+            }            
+            // Box coordinates
+            if self.settings.modes.box_mode {
+                // 1) box[internal] > box[visible]
+                let x = vec![self.settings.internalbox.p1.x, self.settings.internalbox.p2.x, self.settings.internalbox.p3.x, self.settings.internalbox.p4.x];
+                let y = vec![self.settings.internalbox.p1.y, self.settings.internalbox.p2.y, self.settings.internalbox.p3.y, self.settings.internalbox.p4.y];
+                let z = vec![self.settings.internalbox.p1.z, self.settings.internalbox.p2.z, self.settings.internalbox.p3.z, self.settings.internalbox.p4.z];
+                let xmin = x.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                let xmax = x.iter().fold(f64::INFINITY, |a, &b| a.max(b));
+                let ymin = y.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                let ymax = y.iter().fold(f64::INFINITY, |a, &b| a.max(b));
+                let zmin = z.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+                let zmax = z.iter().fold(f64::INFINITY, |a, &b| a.max(b));
+                // P1
+                if (self.settings.visiblebox.p1.x < xmin && self.settings.visiblebox.p1.x > xmax) || (self.settings.visiblebox.p1.y < ymin && self.settings.visiblebox.p1.y > ymax) || (self.settings.visiblebox.p1.z < zmin && self.settings.visiblebox.p1.z > zmax) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P2
+                if (self.settings.visiblebox.p2.x < xmin && self.settings.visiblebox.p2.x > xmax) || (self.settings.visiblebox.p2.y < ymin && self.settings.visiblebox.p2.y > ymax) || (self.settings.visiblebox.p2.z < zmin && self.settings.visiblebox.p2.z > zmax) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P3
+                if (self.settings.visiblebox.p3.x < xmin && self.settings.visiblebox.p3.x > xmax) || (self.settings.visiblebox.p3.y < ymin && self.settings.visiblebox.p3.y > ymax) || (self.settings.visiblebox.p3.z < zmin && self.settings.visiblebox.p3.z > zmax) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P4
+                if (self.settings.visiblebox.p4.x < xmin && self.settings.visiblebox.p4.x > xmax) || (self.settings.visiblebox.p4.y < ymin && self.settings.visiblebox.p4.y > ymax) || (self.settings.visiblebox.p4.z < zmin && self.settings.visiblebox.p4.z > zmax) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // 2) box[internal] < pdb_boundaries[pdb] +- ( probe_out + 20.0 A )
+                let pdb_boundaries = self.get_pdb_boundaries();
+                // P1
+                if (self.settings.internalbox.p1.x < pdb_boundaries.x_min && self.settings.internalbox.p1.x > pdb_boundaries.x_max) || (self.settings.internalbox.p1.y < pdb_boundaries.y_min && self.settings.internalbox.p1.y > pdb_boundaries.y_max) || (self.settings.internalbox.p1.z < pdb_boundaries.z_min && self.settings.internalbox.p1.z > pdb_boundaries.z_max) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P2
+                if (self.settings.internalbox.p2.x < pdb_boundaries.x_min && self.settings.internalbox.p2.x > pdb_boundaries.x_max) || (self.settings.internalbox.p2.y < pdb_boundaries.y_min && self.settings.internalbox.p2.y > pdb_boundaries.y_max) || (self.settings.internalbox.p2.z < pdb_boundaries.z_min && self.settings.internalbox.p2.z > pdb_boundaries.z_max) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P3
+                if (self.settings.internalbox.p3.x < pdb_boundaries.x_min && self.settings.internalbox.p3.x > pdb_boundaries.x_max) || (self.settings.internalbox.p3.y < pdb_boundaries.y_min && self.settings.internalbox.p3.y > pdb_boundaries.y_max) || (self.settings.internalbox.p3.z < pdb_boundaries.z_min && self.settings.internalbox.p3.z > pdb_boundaries.z_max) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
+                // P4
+                if (self.settings.internalbox.p4.x < pdb_boundaries.x_min && self.settings.internalbox.p4.x > xmax) || (self.settings.internalbox.p4.y < pdb_boundaries.y_min && self.settings.internalbox.p4.y > ymax) || (self.settings.internalbox.p4.z < pdb_boundaries.z_min && self.settings.internalbox.p4.z > zmax) {
+                    return Err("Invalid parameters file! Inconsistent box coordinates!")
+                }
             }
-            // Box inside pdb grid
-            // TODO
             // Return Ok (All parameters are acceptable)
             Ok(())
         }
 
         fn get_pdb_boundaries(&self) -> PdbBoundaries {
-            //TODO
+            let mut x_min : f64 = 99999.9;
+            let mut y_min : f64 = 99999.9;
+            let mut z_min : f64 = 99999.9;
+            let mut x_max : f64 = -99999.9;
+            let mut y_max : f64 = -99999.9;
+            let mut z_max : f64 = -99999.9;
+
+            let mut atoms = IntoIterator::into_iter(&self.pdb); // strings is moved here
+            while let Some(atom) = atoms.next() { // next() moves a string out of the iter
+                if atom.contains("ATOM") || atom.contains("HETATM") {
+                    let xs : String = atom[30..38].chars().filter(|c| !c.is_whitespace()).collect();
+                    let ys : String = atom[38..46].chars().filter(|c| !c.is_whitespace()).collect();
+                    let zs : String = atom[46..54].chars().filter(|c| !c.is_whitespace()).collect();
+                    let x : f64 = xs.parse().unwrap();
+                    let y : f64 = ys.parse().unwrap();
+                    let z : f64 = zs.parse().unwrap();
+                    if x_min > x {
+                        x_min = x;
+                    }
+                    if x_max < x {
+                        x_max = x;
+                    }
+                    if y_min > y {
+                        y_min = y;
+                    }
+                    if y_max < y {
+                        y_max = y;
+                    }
+                    if z_min > z {
+                        z_min = z;
+                    }
+                    if z_max < z {
+                        z_max = z;
+                    }
+
+                }
+            }
             PdbBoundaries {
-                x_min : 0.0,
-                x_max : 0.0,
-                y_min : 0.0,
-                y_max : 0.0,
-                z_min : 0.0,
-                z_max : 0.0,
+                x_min : x_min - self.settings.probes.probe_out - 20.0,
+                x_max : x_max + self.settings.probes.probe_out + 20.0,
+                y_min : y_min - self.settings.probes.probe_out - 20.0,
+                y_max : y_max + self.settings.probes.probe_out + 20.0,
+                z_min : z_min - self.settings.probes.probe_out - 20.0,
+                z_max : z_max + self.settings.probes.probe_out + 20.0,
             }
         }
     }
@@ -436,7 +504,7 @@ mod kv {
         pub fn create(job_input: web::Json<Input>) -> impl Responder {
             // json input values to inp
             let input = job_input.into_inner();
-            if let Err(e) = &input.check() {
+            if let Err(e) = input.check() {
                 return HttpResponse::BadRequest().body(format!("{:?}", e));
             }
             let data = Data {
