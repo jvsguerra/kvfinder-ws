@@ -42,6 +42,10 @@ worker = None
 # variable to the server you are using   #
 # Server                                 #
 server = "http://localhost"              #
+# Port (local)                           # 
+port = "8081"                            #
+# Port (remote)                          # 
+# port = "80"                            #
 #                                        #
 # Days until job expire                  #
 days_job_expire = 1                      #
@@ -137,7 +141,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
     # Signals
     msgbox_signal = pyqtSignal(bool)
 
-    def __init__(self, server=server, port="8081"):
+    def __init__(self, server=server, port=port):
         super(PyMOLKVFinderWebTools, self).__init__()
         from PyQt5.QtNetwork import QNetworkAccessManager
 
@@ -398,8 +402,17 @@ class PyMOLKVFinderWebTools(QMainWindow):
                 )       
 
         else:
-            print("Error occurred: ", er)
-            print(self.reply.errorString())
+            reply = str(self.reply.readAll(), 'utf-8')
+            # Message to user
+            if verbosity in [1, 3]:
+                print(f'\n\033[91mError {er}\033[0m\n\n') 
+            message = Message(
+                f'Error {er}!',
+                job_id=None,
+                status=None,
+                notification= f'{self.reply.errorString()}\n{reply}\n',
+                )
+            message.exec_()
 
     
     def show_grid(self) -> None:
@@ -1806,7 +1819,6 @@ class Job(object):
                         cmd.save(self.ligand, parameters['files']['ligand'], 0,  'pdb')
         # Request information (server)
         # Input PDB
-        print(self.pdb)
         if self.pdb:
             self._add_pdb(self.pdb)
         # Ligand PDB
@@ -2379,7 +2391,7 @@ class Form(QDialog):
 class Message(QDialog):
 
 
-    def __init__(self, msg: str, job_id: str, status: Optional[str]=None, notification: Optional[str]=None):
+    def __init__(self, msg: str, job_id: Optional[str]=None, status: Optional[str]=None, notification: Optional[str]=None):
         super(Message, self).__init__()
         # Initialize Message GUI
         self.initialize_gui(msg, job_id, status, notification)
@@ -2393,7 +2405,8 @@ class Message(QDialog):
         self.msg.setText(msg)
 
         # Job ID
-        self.job_id.setText(job_id)
+        if job_id:
+            self.job_id.setText(job_id)
 
         # Status
         if status:
@@ -2440,21 +2453,22 @@ class Message(QDialog):
 
         # Create Job ID layout
         self.hframe2 = QHBoxLayout()
-        # Job ID label
-        self.job_id_label = QLabel(self)
-        self.job_id_label.setText("Job ID:")
-        self.job_id_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
-        self.job_id_label.setAlignment(Qt.AlignCenter)
-        # Job ID entry
-        self.job_id = QLineEdit(self)
-        sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        self.job_id.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
-        self.job_id.setReadOnly(True)
-        self.job_id.setFixedWidth(200)
-        # add to layout
-        self.hframe2.addWidget(self.job_id_label)
-        self.hframe2.addWidget(self.job_id)
-        self.hframe2.setAlignment(Qt.AlignCenter)
+        if job_id:
+            # Job ID label
+            self.job_id_label = QLabel(self)
+            self.job_id_label.setText("Job ID:")
+            self.job_id_label.setSizePolicy(QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred))
+            self.job_id_label.setAlignment(Qt.AlignCenter)
+            # Job ID entry
+            self.job_id = QLineEdit(self)
+            sizePolicy1 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+            self.job_id.setSizePolicy(QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed))
+            self.job_id.setReadOnly(True)
+            self.job_id.setFixedWidth(200)
+            # add to layout
+            self.hframe2.addWidget(self.job_id_label)
+            self.hframe2.addWidget(self.job_id)
+            self.hframe2.setAlignment(Qt.AlignCenter)
 
         # Create Status layout
         self.hframe3 = QHBoxLayout()
