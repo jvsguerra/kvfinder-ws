@@ -171,37 +171,37 @@ mod kv {
                 let zmin = z.iter().fold(f64::INFINITY, |a, &b| a.min(b));
                 let zmax = z.iter().fold(f64::INFINITY, |a, &b| a.max(b));
                 // P1
-                if (self.settings.visiblebox.p1.x < xmin && self.settings.visiblebox.p1.x > xmax) || (self.settings.visiblebox.p1.y < ymin && self.settings.visiblebox.p1.y > ymax) || (self.settings.visiblebox.p1.z < zmin && self.settings.visiblebox.p1.z > zmax) {
+                if (self.settings.visiblebox.p1.x < xmin || self.settings.visiblebox.p1.x > xmax) || (self.settings.visiblebox.p1.y < ymin || self.settings.visiblebox.p1.y > ymax) || (self.settings.visiblebox.p1.z < zmin || self.settings.visiblebox.p1.z > zmax) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P2
-                if (self.settings.visiblebox.p2.x < xmin && self.settings.visiblebox.p2.x > xmax) || (self.settings.visiblebox.p2.y < ymin && self.settings.visiblebox.p2.y > ymax) || (self.settings.visiblebox.p2.z < zmin && self.settings.visiblebox.p2.z > zmax) {
+                if (self.settings.visiblebox.p2.x < xmin || self.settings.visiblebox.p2.x > xmax) || (self.settings.visiblebox.p2.y < ymin || self.settings.visiblebox.p2.y > ymax) || (self.settings.visiblebox.p2.z < zmin || self.settings.visiblebox.p2.z > zmax) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P3
-                if (self.settings.visiblebox.p3.x < xmin && self.settings.visiblebox.p3.x > xmax) || (self.settings.visiblebox.p3.y < ymin && self.settings.visiblebox.p3.y > ymax) || (self.settings.visiblebox.p3.z < zmin && self.settings.visiblebox.p3.z > zmax) {
+                if (self.settings.visiblebox.p3.x < xmin || self.settings.visiblebox.p3.x > xmax) || (self.settings.visiblebox.p3.y < ymin || self.settings.visiblebox.p3.y > ymax) || (self.settings.visiblebox.p3.z < zmin || self.settings.visiblebox.p3.z > zmax) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P4
-                if (self.settings.visiblebox.p4.x < xmin && self.settings.visiblebox.p4.x > xmax) || (self.settings.visiblebox.p4.y < ymin && self.settings.visiblebox.p4.y > ymax) || (self.settings.visiblebox.p4.z < zmin && self.settings.visiblebox.p4.z > zmax) {
+                if (self.settings.visiblebox.p4.x < xmin || self.settings.visiblebox.p4.x > xmax) || (self.settings.visiblebox.p4.y < ymin || self.settings.visiblebox.p4.y > ymax) || (self.settings.visiblebox.p4.z < zmin || self.settings.visiblebox.p4.z > zmax) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // 2) box[internal] < pdb_boundaries[pdb] +- ( probe_out + 20.0 A )
                 let pdb_boundaries = self.get_pdb_boundaries();
                 // P1
-                if (self.settings.internalbox.p1.x < pdb_boundaries.x_min && self.settings.internalbox.p1.x > pdb_boundaries.x_max) || (self.settings.internalbox.p1.y < pdb_boundaries.y_min && self.settings.internalbox.p1.y > pdb_boundaries.y_max) || (self.settings.internalbox.p1.z < pdb_boundaries.z_min && self.settings.internalbox.p1.z > pdb_boundaries.z_max) {
+                if (self.settings.internalbox.p1.x < pdb_boundaries.x_min || self.settings.internalbox.p1.x > pdb_boundaries.x_max) || (self.settings.internalbox.p1.y < pdb_boundaries.y_min || self.settings.internalbox.p1.y > pdb_boundaries.y_max) || (self.settings.internalbox.p1.z < pdb_boundaries.z_min || self.settings.internalbox.p1.z > pdb_boundaries.z_max) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P2
-                if (self.settings.internalbox.p2.x < pdb_boundaries.x_min && self.settings.internalbox.p2.x > pdb_boundaries.x_max) || (self.settings.internalbox.p2.y < pdb_boundaries.y_min && self.settings.internalbox.p2.y > pdb_boundaries.y_max) || (self.settings.internalbox.p2.z < pdb_boundaries.z_min && self.settings.internalbox.p2.z > pdb_boundaries.z_max) {
+                if (self.settings.internalbox.p2.x < pdb_boundaries.x_min || self.settings.internalbox.p2.x > pdb_boundaries.x_max) || (self.settings.internalbox.p2.y < pdb_boundaries.y_min || self.settings.internalbox.p2.y > pdb_boundaries.y_max) || (self.settings.internalbox.p2.z < pdb_boundaries.z_min || self.settings.internalbox.p2.z > pdb_boundaries.z_max) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P3
-                if (self.settings.internalbox.p3.x < pdb_boundaries.x_min && self.settings.internalbox.p3.x > pdb_boundaries.x_max) || (self.settings.internalbox.p3.y < pdb_boundaries.y_min && self.settings.internalbox.p3.y > pdb_boundaries.y_max) || (self.settings.internalbox.p3.z < pdb_boundaries.z_min && self.settings.internalbox.p3.z > pdb_boundaries.z_max) {
+                if (self.settings.internalbox.p3.x < pdb_boundaries.x_min || self.settings.internalbox.p3.x > pdb_boundaries.x_max) || (self.settings.internalbox.p3.y < pdb_boundaries.y_min || self.settings.internalbox.p3.y > pdb_boundaries.y_max) || (self.settings.internalbox.p3.z < pdb_boundaries.z_min || self.settings.internalbox.p3.z > pdb_boundaries.z_max) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
                 // P4
-                if (self.settings.internalbox.p4.x < pdb_boundaries.x_min && self.settings.internalbox.p4.x > xmax) || (self.settings.internalbox.p4.y < pdb_boundaries.y_min && self.settings.internalbox.p4.y > ymax) || (self.settings.internalbox.p4.z < pdb_boundaries.z_min && self.settings.internalbox.p4.z > zmax) {
+                if (self.settings.internalbox.p4.x < pdb_boundaries.x_min || self.settings.internalbox.p4.x > xmax) || (self.settings.internalbox.p4.y < pdb_boundaries.y_min || self.settings.internalbox.p4.y > ymax) || (self.settings.internalbox.p4.z < pdb_boundaries.z_min || self.settings.internalbox.p4.z > zmax) {
                     return Err("Invalid parameters file! Inconsistent box coordinates!")
                 }
             }
