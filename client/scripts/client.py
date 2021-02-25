@@ -77,7 +77,7 @@ class KVJob:
         }
 
 class KVClient:
-    def __init__(self, server: str, port: str):
+    def __init__(self, server: str, port="80"):
         self.server = f"{server}:{port}"
 
     def run(self, kv_job: KVJob):
@@ -112,8 +112,11 @@ class KVClient:
     
 
 if __name__ == "__main__":
-    # create and configure a KVClient with server url and port
+    # create and configure a KVClient with server url and port (default 80)
+    # local server 
     kv = KVClient("http://localhost", "8081")
+    # remote server
+    # kv = KVClient("http://parkvfinder")
     # create a job using a pdb file with default configuration (code to configure is not implemented)
     job = KVJob("kv1000/4GOU_A.pdb")
     # send job to server and wait until completion
