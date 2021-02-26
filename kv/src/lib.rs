@@ -210,6 +210,7 @@ mod kv {
             if self.settings.cutoffs.ligand_cutoff <= 0.0 {
                 return Err("Invalid parameters file! Ligand cutoff must be greater than 0!");
             }
+
             // Box inside pdb grid
             if let Ok(pdb_boundaries) = self.get_pdb_boundaries() {
                 if !pdb_boundaries.contains(&self.settings.internalbox) {
