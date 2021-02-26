@@ -1,5 +1,5 @@
+use actix_web::{error, web, App, HttpRequest, HttpResponse, HttpServer};
 use kv;
-use actix_web::{HttpServer, App, web, error, HttpResponse, HttpRequest};
 
 fn json_error_handler(err: error::JsonPayloadError, _req: &HttpRequest) -> error::Error {
     let msg = String::from("Please update your plugin");
@@ -15,10 +15,14 @@ fn main() {
 
     HttpServer::new(|| {
         App::new()
-            .data(web::JsonConfig::default().limit(1_000_000).error_handler(json_error_handler))
+            .data(
+                web::JsonConfig::default()
+                    .limit(1_000_000)
+                    .error_handler(json_error_handler),
+            )
             .route("/", web::get().to(kv::webserver::hello))
             .route("/{id}", web::get().to(kv::webserver::ask))
-            .route("/create", web::post().to(kv::webserver::create)) 
+            .route("/create", web::post().to(kv::webserver::create))
     })
     .bind("0.0.0.0:8081")
     .expect("Cannot bind to port 8081")

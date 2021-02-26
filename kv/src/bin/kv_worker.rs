@@ -1,5 +1,5 @@
 use kv;
-use std::{thread,time};
+use std::{thread, time};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
@@ -9,8 +9,6 @@ struct Cli {
     // path to save jobs
     job_path: String,
 }
-
-
 
 fn main() {
     println!("KVFinder Worker started");
@@ -27,11 +25,11 @@ fn main() {
                 match kv::worker::process(j, &config) {
                     Err(e) => println!("Error processing: {}", e),
                     Ok(output) => match kv::worker::submit_result(id, output) {
-                                        Ok(id) => println!("Job processed successfully: {}", id),
-                                        Err(e) => println!("Error submitting result to queue: {}", e),
+                        Ok(id) => println!("Job processed successfully: {}", id),
+                        Err(e) => println!("Error submitting result to queue: {}", e),
                     },
                 }
-            },
+            }
             //no job to process
             Err(_) => thread::sleep(time::Duration::from_secs(5)),
         }
