@@ -212,12 +212,14 @@ mod kv {
             }
 
             // Box inside pdb grid
-            if let Ok(pdb_boundaries) = self.get_pdb_boundaries() {
-                if !pdb_boundaries.contains(&self.settings.internalbox) {
-                    return Err("Invalid parameters file! Inconsistent box coordinates!");
+            if self.settings.modes.box_mode {
+                if let Ok(pdb_boundaries) = self.get_pdb_boundaries() {
+                    if !pdb_boundaries.contains(&self.settings.internalbox) {
+                        return Err("Invalid parameters file! Inconsistent box coordinates!");
+                    }
+                } else {
+                    return Err("parsing error");
                 }
-            } else {
-                return Err("parsing error");
             }
             Ok(())
         }
