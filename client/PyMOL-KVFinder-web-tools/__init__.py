@@ -1347,7 +1347,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         results_file = self.vis_results_file_entry.text()
         
         # Check if results file exist
-        if os.path.exists(results_file) and results_file.endswith('KVFinder.results.toml'):
+        if os.path.exists(results_file) and results_file.endswith('.toml'):
             print(f"> Loading results from: {self.vis_results_file_entry.text()}")
         else:
             from PyQt5.QtWidgets import QMessageBox
@@ -1359,6 +1359,19 @@ class PyMOLKVFinderWebTools(QMainWindow):
 
         # Read results file 
         results = toml.load(results_file)
+
+        if 'FILES' in results.keys():
+            results['FILES_PATH'] = results.pop('FILES')
+        elif 'FILES_PATH' in results.keys():
+            pass
+        else:
+            from PyQt5.QtWidgets import QMessageBox
+            error_msg = QMessageBox.critical(self, "Error", "Results file has incorrect format! Please check your file.")
+            return False
+
+        if 'PARAMETERS' in results.keys():
+            if 'STEP' in results['PARAMETERS'].keys():
+                results['PARAMETERS']['STEP_SIZE'] = results['PARAMETERS'].pop('STEP')
 
         # Clean results
         self.clean_results()
@@ -1414,7 +1427,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         
         
         # Get results file
-        fname, _ = QFileDialog.getOpenFileName(self, caption='Choose KVFinder Results File', directory=os.getcwd(), filter="KVFinder Results File (*.KVFinder.results.toml)")
+        fname, _ = QFileDialog.getOpenFileName(self, caption='Choose KVFinder Results File', directory=os.getcwd(), filter="KVFinder Results File (*.KVFinder.results.toml);;All files (*)")
 
         if fname:
             fname = QDir.toNativeSeparators(fname)
@@ -1471,7 +1484,9 @@ class PyMOLKVFinderWebTools(QMainWindow):
         self.vis_cavities_file_entry.setText(f"{results['FILES_PATH']['OUTPUT']}")
 
         # Step Size
-        self.vis_step_size_entry.setText(f"{results['PARAMETERS']['STEP_SIZE']:.2f}")
+        if 'PARAMETERS' in results.keys():
+            if 'STEP_SIZE' in results['PARAMETERS'].keys():
+                self.vis_step_size_entry.setText(f"{results['PARAMETERS']['STEP_SIZE']:.2f}")
 
         return
 
@@ -1511,6 +1526,11 @@ class PyMOLKVFinderWebTools(QMainWindow):
         # Get selected cavities from residues list
         cavs = [item.text() for item in self.residues_list.selectedItems()]
 
+        # Clean objects
+        cmd.set("auto_zoom", 0)
+        cmd.delete("res")
+        cmd.delete("residues")
+
         # Return if no cavity is selected 
         if len(cavs) < 1:
             return
@@ -1521,11 +1541,6 @@ class PyMOLKVFinderWebTools(QMainWindow):
             for residue in results['RESULTS']['RESIDUES'][cav]:
                 if residue not in residues:
                     residues.append(residue)
-
-        # Clean objects
-        cmd.set("auto_zoom", 0)
-        cmd.delete("res")
-        cmd.delete("residues")
 
         # Check if input pdb is loaded
         control = 0
@@ -1567,14 +1582,14 @@ class PyMOLKVFinderWebTools(QMainWindow):
             else:
                 list2.item(index).setSelected(False)
 
-        # Return if no cavity is selected 
-        if len(cavs) < 1:
-            return
-
         # Clean objects
         cmd.set("auto_zoom", 0)
         cmd.delete("cavs")
         cmd.delete("cavities")
+
+        # Return if no cavity is selected 
+        if len(cavs) < 1:
+            return
         
         # Check if cavity file is loaded
         control = 0
@@ -1598,7 +1613,7 @@ class PyMOLKVFinderWebTools(QMainWindow):
         cmd.show("nonbonded", "cavities")
 
         # Color surface cavity points as red nb_spheres
-        cmd.select("cavs", "cavities and name HS")
+        cmd.select("cavs", "cavities and name HS+HA")
         cmd.color("red", "cavs")
         cmd.show("nb_spheres", "cavs")
         cmd.delete("cavs")
