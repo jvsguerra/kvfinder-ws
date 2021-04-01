@@ -1,0 +1,28 @@
+==========	START	RUN	=========
+
+Date and time: Thu Apr  1 21:53:09 2021
+
+Running parKVFinder for job ID: 9556742417561716475
+Resolution: Low
+Step size too small! Resizing... New step size = 0.15
+Step size too small! Resizing... New step size = 0.20
+Step size too small! Resizing... New step size = 0.25
+Step size too small! Resizing... New step size = 0.30
+Step size too small! Resizing... New step size = 0.35
+Step size too small! Resizing... New step size = 0.40
+Step size too small! Resizing... New step size = 0.45
+Step size too small! Resizing... New step size = 0.50
+Step size too small! Resizing... New step size = 0.55
+Step size too small! Resizing... New step size = 0.60
+Chosen step size = 0.60
+Unitary box volume: 0.2160 Angstrons^3
+m: 99	n: 124	o: 95
+sina: 0.00	sinb: 0.00	
+cosa: 1.00	cosb: 1.00
+Warning: Atom radius not found in dictionary:OXT PHE!
+Warning: Using generic atom O radius value 1.69
+Elapsed time: 13.11 seconds
+
+==========	END	RUN	=========
+
+

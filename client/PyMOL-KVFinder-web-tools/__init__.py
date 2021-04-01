@@ -42,10 +42,8 @@ worker = None
 # variable to the server you are using   #
 # Server                                 #
 server = "http://localhost"              #
-# Port (local)                           # 
+# Port                                   # 
 port = "8081"                            #
-# Port (remote)                          # 
-# port = "80"                            #
 #                                        #
 # Days until job expire                  #
 days_job_expire = 1                      #
@@ -2136,12 +2134,13 @@ class Worker(QThread):
             self.job_info.output = reply
             self.job_info.status = reply['status']
             self.job_info.save(self.job_info.id)
-
+            
             # Export results
-            try:
-                self.job_info.export()
-            except Exception as e:
-                print("Error occurred: ", e)
+            if self.job_info.status == 'completed':
+                try:
+                    self.job_info.export()
+                except Exception as e:
+                    print("Error occurred: ", e)
 
             # Send Server Up Signal to GUI Thread
             self.server_up.emit()  
