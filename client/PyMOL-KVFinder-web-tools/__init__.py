@@ -41,7 +41,7 @@ worker = None
 # KVFinder-web server. Change this       #
 # variable to the server you are using   #
 # Server                                 #
-server = "http://localhost"              #
+server = "http://parkvfinder.cnpem.br"   #
 # Port                                   # 
 port = "8081"                            #
 #                                        #
